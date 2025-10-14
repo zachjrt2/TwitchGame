@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Life - Session 6</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        #gameCanvas {
+            border: 2px solid #333;
+            background: #1a1a2e;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+        }
+        
+        .connection-panel {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .connection-panel input {
+            background: #1a1a2e;
+            border: 2px solid #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            width: 200px;
+        }
+        
+        .connection-panel button {
+            background: #4ecca3;
+            border: none;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .connection-panel button:hover {
+            background: #45b393;
+        }
+        
+        .connection-panel button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            color: #4ecca3;
+            font-size: 12px;
+        }
+        
+        .status.disconnected {
+            color: #ff6b6b;
+        }
+        
+        .hud {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.8;
+            min-width: 200px;
+        }
+        
+        .hud-title {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #4ecca3;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+        
+        .energy-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .energy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecca3, #45b393);
+            transition: width 0.3s ease;
+        }
+        
+        .vote-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid #4ecca3;
+            min-width: 400px;
+            display: none;
+        }
+        
+        .vote-panel.active {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translate(-50%, -60%);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, -50%);
+                opacity: 1;
+            }
+        }
+        
+        .vote-title {
+            font-size: 24px;
+            color: #4ecca3;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .vote-timer {
+            font-size: 36px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        
+        .vote-options {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .vote-option {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid transparent;
+        }
+        
+        .vote-option.winning {
+            border-color: #4ecca3;
+            background: rgba(78, 204, 163, 0.1);
+        }
+        
+        .vote-command {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .vote-description {
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        .vote-count {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4ecca3;
+        }
+        
+        .vote-bar {
+            height: 4px;
+            background: rgba(78, 204, 163, 0.3);
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .vote-bar-fill {
+            height: 100%;
+            background: #4ecca3;
+            transition: width 0.3s ease;
+        }
+        
+        .debug-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px 50px;
+            border-radius: 12px;
+            font-size: 32px;
+            font-weight: bold;
+            color: #4ecca3;
+            border: 3px solid #4ecca3;
+            display: none;
+            z-index: 1000;
+            animation: notificationPulse 0.5s ease;
+        }
+
+        .notification.show {
+            display: block;
+        }
+
+        @keyframes notificationPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-panel">
+        <input type="text" id="channelInput" placeholder="Enter Twitch channel..." value="">
+        <button id="connectBtn">Connect</button>
+        <button id="disconnectBtn" style="display:none;">Disconnect</button>
+        <span class="status disconnected" id="status">Not connected</span>
+    </div>
+    
+    <canvas id="gameCanvas"></canvas>
+    
+    <div class="notification" id="notification"></div>
+    
+    <div class="vote-panel" id="votePanel">
+        <div class="vote-title">CHAT VOTE ACTIVE!</div>
+        <div class="vote-timer" id="voteTimer">30</div>
+        <div class="vote-options" id="voteOptions"></div>
+    </div>
+    
+    <div class="hud">
+        <div class="hud-title">CHAT LIFE</div>
+        <div>Channel: <span id="channelName">-</span></div>
+        <div>Chat Energy: <span id="energyLevel">50</span>%</div>
+        <div class="energy-bar">
+            <div class="energy-fill" id="energyBar" style="width: 50%"></div>
+        </div>
+        <div style="margin-top: 10px;">Population: <span id="popCount">0</span> / <span id="popCap">20</span></div>
+        <div>Active Chatters: <span id="chatterCount">0</span></div>
+        <div style="margin-top: 10px; color: #4ecca3;">Next Vote: <span id="nextVote">--</span>s</div>
+    </div>
+    
+    <div class="debug-info">
+        <div>FPS: <span id="fps">0</span></div>
+        <div>Entities: <span id="entityCount">0</span></div>
+        <div>Food: <span id="foodCount">0</span></div>
+        <div>Particles: <span id="particleCount">0</span></div>
+    </div>
+
+    <script src="tmi.min.js"></script>
+    <script>
+        // Wait for tmi.js to load before initializing
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check if tmi loaded
+            if (typeof tmi === 'undefined') {
+                console.error('tmi.js failed to load from CDN');
+                document.getElementById('status').textContent = 'TMI.js failed to load';
+                document.getElementById('status').className = 'status disconnected';
+            } else {
+                console.log('tmi.js loaded successfully');
+            }
+        });
+    </script>
+    <script>
+        // ==========================================
+        // CONFIG
+        // ==========================================
+        const CONFIG = {
+            canvas: {
+                width: 1200,
+                height: 800
+            },
+            entity: {
+                baseSize: 15,
+                maxSize: 50,
+                baseSpeed: 50,
+                speedVariance: 30,
+                wanderStrength: 2,
+                maxHealth: 100,
+                startingHealth: 100,
+                healthDecayRate: 1.5,
+                foodDetectionRange: 120,
+                foodAttractionStrength: 3,
+                eatRange: 15,
+                foodEnergyGain: 25,
+                growthRate: 0.3,
+                collisionDamage: 5,
+                reproductionThreshold: 80,
+                reproductionCost: 40,
+                reproductionCooldown: 10
+            },
+            food: {
+                size: 6,
+                spawnInterval: 2,
+                spawnAmount: 3,
+                dropOnDeath: 2
+            },
+            twitch: {
+                energyPerMessage: 2,
+                energyDecayRate: 5,
+                minEnergy: 20,
+                maxEnergy: 100,
+                populationCapMin: 10,
+                populationCapMax: 30
+            },
+            voting: {
+                interval: 180,
+                duration: 30,
+                cooldown: 30,
+                options: [
+                    { command: '!food', name: 'Spawn Food', description: 'Add 20 food items' },
+                    { command: '!bomb', name: 'Meteor Strike', description: 'Damage random area' },
+                    { command: '!heal', name: 'Heal All', description: 'Restore all health' },
+                    { command: '!spawn', name: 'Spawn Entity', description: 'Add 3 new creatures' }
+                ]
+            }
+        };
+
+        // ==========================================
+        // UTILITY FUNCTIONS
+        // ==========================================
+        function randomRange(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        function distance(x1, y1, x2, y2) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function clamp(val, min, max) {
+            return Math.min(Math.max(val, min), max);
+        }
+
+        // ==========================================
+        // PARTICLE CLASS
+        // ==========================================
+        class Particle {
+            constructor(x, y, type = 'generic') {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.alive = true;
+                this.age = 0;
+                this.maxAge = 1;
+                
+                switch(type) {
+                    case 'explosion':
+                        this.vx = randomRange(-200, 200);
+                        this.vy = randomRange(-200, 200);
+                        this.size = randomRange(3, 8);
+                        this.color = `hsl(${randomRange(0, 60)}, 100%, 60%)`;
+                        this.maxAge = randomRange(0.3, 0.6);
+                        break;
+                    case 'heal':
+                        this.vx = randomRange(-50, 50);
+                        this.vy = randomRange(-100, -50);
+                        this.size = randomRange(4, 8);
+                        this.color = '#4ecca3';
+                        this.maxAge = randomRange(0.8, 1.2);
+                        break;
+                    case 'spawn':
+                        this.vx = randomRange(-100, 100);
+                        this.vy = randomRange(-100, 100);
+                        this.size = randomRange(3, 6);
+                        this.color = `hsl(${randomRange(180, 250)}, 80%, 60%)`;
+                        this.maxAge = randomRange(0.5, 1);
+                        break;
+                    case 'food':
+                        this.vx = randomRange(-80, 80);
+                        this.vy = randomRange(-80, 80);
+                        this.size = randomRange(2, 5);
+                        this.color = '#4ecca3';
+                        this.maxAge = randomRange(0.4, 0.8);
+                        break;
+                }
+            }
+
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                this.vy += 200 * dt; // gravity
+                this.vx *= 0.98; // friction
+                this.age += dt;
+                
+                if (this.age >= this.maxAge) {
+                    this.alive = false;
+                }
+            }
+
+            draw(ctx) {
+                const alpha = 1 - (this.age / this.maxAge);
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // ==========================================
+        // FOOD CLASS
+        // ==========================================
+        class Food {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = CONFIG.food.size;
+                this.alive = true;
+                this.age = 0;
+                this.pulsePhase = Math.random() * Math.PI * 2;
+            }
+
+            update(dt) {
+                this.age += dt;
+                this.pulsePhase += dt * 2;
+            }
+
+            draw(ctx) {
+                const pulse = Math.sin(this.pulsePhase) * 0.3 + 1;
+                const currentSize = this.size * pulse;
+                
+                ctx.fillStyle = '#4ecca3';
+                ctx.strokeStyle = '#45b393';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, currentSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            consume() {
+                this.alive = false;
+            }
+        }
+
+        // ==========================================
+        // ENTITY CLASS
+        // ==========================================
+        class Entity {
+            constructor(x, y, name = "Entity", parentSize = null) {
+                this.x = x;
+                this.y = y;
+                this.name = name;
+                
+                this.vx = randomRange(-1, 1);
+                this.vy = randomRange(-1, 1);
+                this.speed = CONFIG.entity.baseSpeed + randomRange(-CONFIG.entity.speedVariance, CONFIG.entity.speedVariance);
+                
+                this.health = CONFIG.entity.startingHealth;
+                this.maxHealth = CONFIG.entity.maxHealth;
+                this.size = parentSize ? parentSize * 0.6 : CONFIG.entity.baseSize;
+                this.age = 0;
+                this.alive = true;
+                this.timeSinceReproduction = 0;
+                this.isChatter = false;
+                
+                this.hue = Math.random() * 360;
+                this.updateShape();
+            }
+
+            updateShape() {
+                if (this.size < 20) {
+                    this.shape = 'triangle';
+                } else if (this.size < 30) {
+                    this.shape = 'square';
+                } else if (this.size < 40) {
+                    this.shape = 'pentagon';
+                } else {
+                    this.shape = 'hexagon';
+                }
+            }
+
+            update(dt, worldWidth, worldHeight, foodArray, otherEntities) {
+                this.health -= CONFIG.entity.healthDecayRate * dt;
+                this.timeSinceReproduction += dt;
+                
+                if (this.health <= 0) {
+                    this.health = 0;
+                    this.alive = false;
+                    return;
+                }
+                
+                if (this.health > 70 && this.size < CONFIG.entity.maxSize) {
+                    this.size += CONFIG.entity.growthRate * dt;
+                    this.size = Math.min(this.size, CONFIG.entity.maxSize);
+                    this.updateShape();
+                }
+                
+                let nearestFood = null;
+                let nearestDist = Infinity;
+                
+                for (const food of foodArray) {
+                    if (!food.alive) continue;
+                    const dist = distance(this.x, this.y, food.x, food.y);
+                    if (dist < nearestDist && dist < CONFIG.entity.foodDetectionRange) {
+                        nearestDist = dist;
+                        nearestFood = food;
+                    }
+                }
+                
+                if (nearestFood) {
+                    const dx = nearestFood.x - this.x;
+                    const dy = nearestFood.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist > 0) {
+                        const seekStrength = CONFIG.entity.foodAttractionStrength * dt;
+                        this.vx += (dx / dist) * seekStrength;
+                        this.vy += (dy / dist) * seekStrength;
+                    }
+                    
+                    if (dist < CONFIG.entity.eatRange) {
+                        this.eatFood(nearestFood);
+                    }
+                }
+                
+                for (const other of otherEntities) {
+                    if (other === this || !other.alive) continue;
+                    
+                    const dist = distance(this.x, this.y, other.x, other.y);
+                    const minDist = this.size + other.size;
+                    
+                    if (dist < minDist) {
+                        this.health -= CONFIG.entity.collisionDamage * dt;
+                        
+                        const overlap = minDist - dist;
+                        const pushX = (this.x - other.x) / dist * overlap * 0.5;
+                        const pushY = (this.y - other.y) / dist * overlap * 0.5;
+                        
+                        this.x += pushX;
+                        this.y += pushY;
+                        
+                        this.vx = -this.vx;
+                        this.vy = -this.vy;
+                    }
+                }
+                
+                this.vx += randomRange(-CONFIG.entity.wanderStrength, CONFIG.entity.wanderStrength) * dt;
+                this.vy += randomRange(-CONFIG.entity.wanderStrength, CONFIG.entity.wanderStrength) * dt;
+                
+                const mag = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (mag > 0) {
+                    this.vx /= mag;
+                    this.vy /= mag;
+                }
+                
+                this.x += this.vx * this.speed * dt;
+                this.y += this.vy * this.speed * dt;
+                
+                if (this.x < this.size) {
+                    this.x = this.size;
+                    this.vx = Math.abs(this.vx);
+                }
+                if (this.x > worldWidth - this.size) {
+                    this.x = worldWidth - this.size;
+                    this.vx = -Math.abs(this.vx);
+                }
+                if (this.y < this.size) {
+                    this.y = this.size;
+                    this.vy = Math.abs(this.vy);
+                }
+                if (this.y > worldHeight - this.size) {
+                    this.y = worldHeight - this.size;
+                    this.vy = -Math.abs(this.vy);
+                }
+                
+                this.age += dt;
+            }
+
+            eatFood(food) {
+                food.consume();
+                this.health = Math.min(this.health + CONFIG.entity.foodEnergyGain, this.maxHealth);
+            }
+
+            canReproduce() {
+                return this.health >= CONFIG.entity.reproductionThreshold && 
+                       this.timeSinceReproduction >= CONFIG.entity.reproductionCooldown &&
+                       this.size > 20;
+            }
+
+            reproduce() {
+                this.health -= CONFIG.entity.reproductionCost;
+                this.timeSinceReproduction = 0;
+                
+                const angle = Math.random() * Math.PI * 2;
+                const dist = this.size + 20;
+                const childX = this.x + Math.cos(angle) * dist;
+                const childY = this.y + Math.sin(angle) * dist;
+                
+                return new Entity(childX, childY, this.name + "'", this.size);
+            }
+
+            draw(ctx) {
+                const healthPercent = this.health / this.maxHealth;
+                const brightness = lerp(30, 70, healthPercent);
+                const saturation = lerp(40, 90, healthPercent);
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                if (this.isChatter) {
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = `hsl(${this.hue}, 80%, 60%)`;
+                }
+                
+                ctx.fillStyle = `hsl(${this.hue}, ${saturation}%, ${brightness}%)`;
+                ctx.strokeStyle = `hsl(${this.hue}, ${saturation}%, ${brightness + 10}%)`;
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                
+                const sides = this.shape === 'triangle' ? 3 :
+                             this.shape === 'square' ? 4 :
+                             this.shape === 'pentagon' ? 5 : 6;
+                
+                for (let i = 0; i < sides; i++) {
+                    const angle = (Math.PI * 2 * i / sides) - Math.PI / 2;
+                    const x = Math.cos(angle) * this.size;
+                    const y = Math.sin(angle) * this.size;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.shadowBlur = 0;
+                
+                const barWidth = this.size * 2;
+                const barHeight = 4;
+                const barY = this.size + 8;
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(-barWidth / 2, barY, barWidth, barHeight);
+                
+                ctx.fillStyle = healthPercent > 0.3 ? '#4ecca3' : '#ff6b6b';
+                ctx.fillRect(-barWidth / 2, barY, barWidth * healthPercent, barHeight);
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.font = '12px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.name, 0, barY + 16);
+                
+                ctx.restore();
+            }
+        }
+
+        // ==========================================
+        // VOTE MANAGER
+        // ==========================================
+        class VoteManager {
+            constructor(world, twitchManager) {
+                this.world = world;
+                this.twitchManager = twitchManager;
+                this.active = false;
+                this.votes = {};
+                this.timeUntilNextVote = CONFIG.voting.interval;
+                this.voteDuration = 0;
+                this.lastWinner = null;
+            }
+
+            update(dt) {
+                if (this.active) {
+                    this.voteDuration -= dt;
+                    if (this.voteDuration <= 0) {
+                        this.endVote();
+                    }
+                } else {
+                    this.timeUntilNextVote -= dt;
+                    if (this.timeUntilNextVote <= 0 && this.twitchManager.connected) {
+                        this.startVote();
+                    }
+                }
+            }
+
+            startVote() {
+                this.active = true;
+                this.voteDuration = CONFIG.voting.duration;
+                this.votes = {};
+                
+                for (const option of CONFIG.voting.options) {
+                    this.votes[option.command] = 0;
+                }
+                
+                this.renderVoteUI();
+                document.getElementById('votePanel').classList.add('active');
+            }
+
+            castVote(command) {
+                if (this.active && this.votes.hasOwnProperty(command)) {
+                    this.votes[command]++;
+                    this.renderVoteUI();
+                }
+            }
+
+            endVote() {
+                this.active = false;
+                document.getElementById('votePanel').classList.remove('active');
+                
+                let winner = null;
+                let maxVotes = 0;
+                for (const [command, count] of Object.entries(this.votes)) {
+                    if (count > maxVotes) {
+                        maxVotes = count;
+                        winner = command;
+                    }
+                }
+                
+                if (winner && maxVotes > 0) {
+                    this.executeVote(winner);
+                    this.lastWinner = winner;
+                }
+                
+                this.timeUntilNextVote = CONFIG.voting.interval + CONFIG.voting.cooldown;
+            }
+
+            executeVote(command) {
+                const optionName = CONFIG.voting.options.find(o => o.command === command)?.name || command;
+                this.showNotification(optionName);
+                
+                switch(command) {
+                    case '!food':
+                        for (let i = 0; i < 20; i++) {
+                            const x = randomRange(50, this.world.width - 50);
+                            const y = randomRange(50, this.world.height - 50);
+                            this.world.spawnFood(x, y);
+                            // Spawn particles
+                            for (let j = 0; j < 3; j++) {
+                                this.world.particles.push(new Particle(x, y, 'food'));
+                            }
+                        }
+                        break;
+                    
+                    case '!bomb':
+                        const bombX = randomRange(200, this.world.width - 200);
+                        const bombY = randomRange(200, this.world.height - 200);
+                        const bombRadius = 150;
+                        
+                        // Spawn explosion particles
+                        for (let i = 0; i < 50; i++) {
+                            this.world.particles.push(new Particle(bombX, bombY, 'explosion'));
+                        }
+                        
+                        for (const entity of this.world.entities) {
+                            const dist = distance(entity.x, entity.y, bombX, bombY);
+                            if (dist < bombRadius) {
+                                const damage = 50 * (1 - dist / bombRadius);
+                                entity.health -= damage;
+                            }
+                        }
+                        break;
+                    
+                    case '!heal':
+                        for (const entity of this.world.entities) {
+                            entity.health = entity.maxHealth;
+                            // Spawn heal particles
+                            for (let i = 0; i < 8; i++) {
+                                this.world.particles.push(new Particle(entity.x, entity.y, 'heal'));
+                            }
+                        }
+                        break;
+                    
+                    case '!spawn':
+                        for (let i = 0; i < 3; i++) {
+                            const x = randomRange(100, this.world.width - 100);
+                            const y = randomRange(100, this.world.height - 100);
+                            const names = ['Voter', 'Spawned', 'Summoned', 'Called'];
+                            const name = names[Math.floor(Math.random() * names.length)];
+                            this.world.entities.push(new Entity(x, y, name));
+                            
+                            // Spawn particles
+                            for (let j = 0; j < 15; j++) {
+                                this.world.particles.push(new Particle(x, y, 'spawn'));
+                            }
+                        }
+                        break;
+                }
+            }
+
+            showNotification(text) {
+                const notif = document.getElementById('notification');
+                notif.textContent = text;
+                notif.classList.add('show');
+                
+                setTimeout(() => {
+                    notif.classList.remove('show');
+                }, 2000);
+            }
+
+            renderVoteUI() {
+                const container = document.getElementById('voteOptions');
+                container.innerHTML = '';
+                
+                const totalVotes = Object.values(this.votes).reduce((a, b) => a + b, 0);
+                let maxVotes = Math.max(...Object.values(this.votes));
+                
+                for (const option of CONFIG.voting.options) {
+                    const votes = this.votes[option.command] || 0;
+                    const percent = totalVotes > 0 ? (votes / totalVotes) * 100 : 0;
+                    const isWinning = votes > 0 && votes === maxVotes;
+                    
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'vote-option' + (isWinning ? ' winning' : '');
+                    optionDiv.innerHTML = `
+                        <div>
+                            <div class="vote-command">${option.command}</div>
+                            <div class="vote-description">${option.description}</div>
+                        </div>
+                        <div class="vote-count">${votes}</div>
+                    `;
+                    
+                    const bar = document.createElement('div');
+                    bar.className = 'vote-bar';
+                    bar.innerHTML = `<div class="vote-bar-fill" style="width: ${percent}%"></div>`;
+                    optionDiv.appendChild(bar);
+                    
+                    container.appendChild(optionDiv);
+                }
+            }
+
+            getTimeUntilNext() {
+                return Math.ceil(this.timeUntilNextVote);
+            }
+
+            getVoteDuration() {
+                return Math.ceil(this.voteDuration);
+            }
+        }
+
+        // ==========================================
+        // TWITCH CHAT MANAGER
+        // ==========================================
+        class TwitchManager {
+            constructor(world) {
+                this.world = world;
+                this.client = null;
+                this.connected = false;
+                this.channel = null;
+                this.chatters = new Set();
+                this.messageCount = 0;
+                this.voteManager = null;
+            }
+
+            setVoteManager(voteManager) {
+                this.voteManager = voteManager;
+            }
+
+            async connect(channelName) {
+                // Check if tmi.js is available
+                if (typeof tmi === 'undefined') {
+                    alert('⚠️ Twitch integration requires downloading this file!\n\nTo use Twitch features:\n1. Click the code icon (</>) below\n2. Copy all the code\n3. Save it as "chatlife.html" on your computer\n4. Open the file in your browser\n\nThe game will work fully in your browser with live Twitch chat!');
+                    console.error('tmi.js not loaded. This artifact needs to be run as a standalone HTML file to connect to Twitch.');
+                    return false;
+                }
+
+                if (this.connected) {
+                    this.disconnect();
+                }
+
+                this.channel = channelName.toLowerCase().replace('#', '');
+                
+                this.client = new tmi.Client({
+                    options: { debug: true },
+                    connection: {
+                        reconnect: true,
+                        secure: true
+                    },
+                    channels: [this.channel]
+                });
+
+                this.client.on('message', (channel, tags, message, self) => {
+                    this.handleMessage(tags.username, message);
+                });
+
+                this.client.on('connected', (addr, port) => {
+                    this.connected = true;
+                    console.log(`Connected to ${this.channel} at ${addr}:${port}`);
+                });
+
+                this.client.on('disconnected', (reason) => {
+                    console.log(`Disconnected: ${reason}`);
+                });
+
+                try {
+                    await this.client.connect();
+                    return true;
+                } catch (error) {
+                    console.error('Connection failed:', error);
+                    alert(`Failed to connect to channel: ${this.channel}. Make sure the channel name is correct and the channel exists.`);
+                    return false;
+                }
+            }
+
+            disconnect() {
+                if (this.client) {
+                    this.client.disconnect();
+                    this.client = null;
+                }
+                this.connected = false;
+                this.channel = null;
+                this.chatters.clear();
+            }
+
+            handleMessage(username, message) {
+                this.messageCount++;
+                
+                this.world.addEnergy(CONFIG.twitch.energyPerMessage);
+                
+                if (this.voteManager && this.voteManager.active) {
+                    const command = message.trim().toLowerCase();
+                    if (command.startsWith('!')) {
+                        this.voteManager.castVote(command);
+                    }
+                }
+                
+                if (!this.chatters.has(username)) {
+                    this.chatters.add(username);
+                    this.world.spawnChatter(username);
+                }
+            }
+
+            getChatters() {
+                return this.chatters;
+            }
+        }
+
+        // ==========================================
+        // GAME WORLD
+        // ==========================================
+        class World {
+            constructor(width, height) {
+                this.width = width;
+                this.height = height;
+                this.entities = [];
+                this.food = [];
+                this.particles = [];
+                this.energy = 50;
+                this.deathCount = 0;
+                this.birthCount = 0;
+                
+                this.foodSpawnTimer = 0;
+                
+                this.spawnInitialEntities();
+                this.spawnInitialFood();
+            }
+
+            getPopulationCap() {
+                const energyPercent = this.energy / 100;
+                return Math.floor(lerp(
+                    CONFIG.twitch.populationCapMin,
+                    CONFIG.twitch.populationCapMax,
+                    energyPercent
+                ));
+            }
+
+            addEnergy(amount) {
+                this.energy = clamp(
+                    this.energy + amount,
+                    CONFIG.twitch.minEnergy,
+                    CONFIG.twitch.maxEnergy
+                );
+            }
+
+            spawnChatter(username) {
+                const cap = this.getPopulationCap();
+                if (this.entities.length >= cap) return;
+                
+                const x = randomRange(100, this.width - 100);
+                const y = randomRange(100, this.height - 100);
+                const entity = new Entity(x, y, username);
+                entity.isChatter = true;
+                entity.hue = (username.charCodeAt(0) * 137.5) % 360;
+                this.entities.push(entity);
+                
+                // Spawn particles when chatter joins
+                for (let i = 0; i < 12; i++) {
+                    this.particles.push(new Particle(x, y, 'spawn'));
+                }
+            }
+
+            spawnInitialEntities() {
+                const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
+                for (let i = 0; i < 6; i++) {
+                    const x = randomRange(100, this.width - 100);
+                    const y = randomRange(100, this.height - 100);
+                    this.entities.push(new Entity(x, y, names[i]));
+                }
+            }
+
+            spawnInitialFood() {
+                for (let i = 0; i < 15; i++) {
+                    this.spawnFood();
+                }
+            }
+
+            spawnFood(x = null, y = null) {
+                const fx = x !== null ? x : randomRange(50, this.width - 50);
+                const fy = y !== null ? y : randomRange(50, this.height - 50);
+                this.food.push(new Food(fx, fy));
+            }
+
+            update(dt) {
+                this.energy = clamp(
+                    this.energy - CONFIG.twitch.energyDecayRate * dt,
+                    CONFIG.twitch.minEnergy,
+                    CONFIG.twitch.maxEnergy
+                );
+                
+                const energyMultiplier = this.energy / 100;
+                const adjustedSpawnInterval = CONFIG.food.spawnInterval / (0.5 + energyMultiplier);
+                
+                this.foodSpawnTimer += dt;
+                if (this.foodSpawnTimer >= adjustedSpawnInterval) {
+                    this.foodSpawnTimer = 0;
+                    const spawnAmount = Math.ceil(CONFIG.food.spawnAmount * energyMultiplier);
+                    for (let i = 0; i < spawnAmount; i++) {
+                        this.spawnFood();
+                    }
+                }
+                
+                // Update particles
+                for (const particle of this.particles) {
+                    particle.update(dt);
+                }
+                this.particles = this.particles.filter(p => p.alive);
+                
+                for (const food of this.food) {
+                    food.update(dt);
+                }
+                
+                this.food = this.food.filter(f => f.alive);
+                
+                for (const entity of this.entities) {
+                    if (entity.alive) {
+                        entity.update(dt, this.width, this.height, this.food, this.entities);
+                    }
+                }
+                
+                const cap = this.getPopulationCap();
+                const newborns = [];
+                for (const entity of this.entities) {
+                    if (entity.alive && entity.canReproduce() && this.entities.length < cap) {
+                        const child = entity.reproduce();
+                        newborns.push(child);
+                        this.birthCount++;
+                        
+                        // Spawn particles on reproduction
+                        for (let i = 0; i < 8; i++) {
+                            this.particles.push(new Particle(child.x, child.y, 'spawn'));
+                        }
+                    }
+                }
+                this.entities.push(...newborns);
+                
+                const deadEntities = this.entities.filter(e => !e.alive);
+                for (const dead of deadEntities) {
+                    for (let i = 0; i < CONFIG.food.dropOnDeath; i++) {
+                        const angle = (Math.PI * 2 * i) / CONFIG.food.dropOnDeath;
+                        const dist = 20;
+                        const fx = dead.x + Math.cos(angle) * dist;
+                        const fy = dead.y + Math.sin(angle) * dist;
+                        this.spawnFood(fx, fy);
+                    }
+                    this.deathCount++;
+                }
+                
+                this.entities = this.entities.filter(e => e.alive);
+                
+                while (this.entities.length < 5) {
+                    const x = randomRange(100, this.width - 100);
+                    const y = randomRange(100, this.height - 100);
+                    const names = ['Newcomer', 'Respawn', 'Phoenix', 'Revival', 'Reborn'];
+                    const name = names[Math.floor(Math.random() * names.length)];
+                    this.entities.push(new Entity(x, y, name));
+                }
+            }
+
+            draw(ctx) {
+                const bgBrightness = Math.floor(lerp(10, 30, this.energy / 100));
+                ctx.fillStyle = `hsl(240, 30%, ${bgBrightness}%)`;
+                ctx.fillRect(0, 0, this.width, this.height);
+                
+                // Draw particles first (behind everything)
+                for (const particle of this.particles) {
+                    particle.draw(ctx);
+                }
+                
+                for (const food of this.food) {
+                    food.draw(ctx);
+                }
+                
+                for (const entity of this.entities) {
+                    entity.draw(ctx);
+                }
+            }
+        }
+
+        // ==========================================
+        // GAME ENGINE
+        // ==========================================
+        class Game {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.canvas.width = CONFIG.canvas.width;
+                this.canvas.height = CONFIG.canvas.height;
+                
+                this.world = new World(CONFIG.canvas.width, CONFIG.canvas.height);
+                this.twitchManager = new TwitchManager(this.world);
+                this.voteManager = new VoteManager(this.world, this.twitchManager);
+                this.twitchManager.setVoteManager(this.voteManager);
+                
+                this.lastTime = performance.now();
+                this.fps = 0;
+                this.frameCount = 0;
+                this.fpsTime = 0;
+                
+                this.setupUI();
+                
+                this.running = true;
+                this.loop();
+            }
+
+            setupUI() {
+                const connectBtn = document.getElementById('connectBtn');
+                const disconnectBtn = document.getElementById('disconnectBtn');
+                const channelInput = document.getElementById('channelInput');
+                const status = document.getElementById('status');
+
+                connectBtn.addEventListener('click', async () => {
+                    const channel = channelInput.value.trim();
+                    if (!channel) return;
+
+                    connectBtn.disabled = true;
+                    status.textContent = 'Connecting...';
+                    status.className = 'status';
+
+                    const success = await this.twitchManager.connect(channel);
+
+                    if (success) {
+                        status.textContent = 'Connected';
+                        status.className = 'status';
+                        connectBtn.style.display = 'none';
+                        disconnectBtn.style.display = 'inline-block';
+                        channelInput.disabled = true;
+                        document.getElementById('channelName').textContent = channel;
+                    } else {
+                        status.textContent = 'Connection failed';
+                        status.className = 'status disconnected';
+                        connectBtn.disabled = false;
+                    }
+                });
+
+                disconnectBtn.addEventListener('click', () => {
+                    this.twitchManager.disconnect();
+                    status.textContent = 'Disconnected';
+                    status.className = 'status disconnected';
+                    connectBtn.style.display = 'inline-block';
+                    disconnectBtn.style.display = 'none';
+                    channelInput.disabled = false;
+                    document.getElementById('channelName').textContent = '-';
+                });
+            }
+
+            loop() {
+                if (!this.running) return;
+                
+                const currentTime = performance.now();
+                const deltaMs = currentTime - this.lastTime;
+                const dt = Math.min(deltaMs / 1000, 0.1); // Cap delta time for stability
+                this.lastTime = currentTime;
+                
+                this.frameCount++;
+                this.fpsTime += deltaMs;
+                if (this.fpsTime >= 1000) {
+                    this.fps = this.frameCount;
+                    this.frameCount = 0;
+                    this.fpsTime = 0;
+                }
+                
+                this.voteManager.update(dt);
+                this.world.update(dt);
+                this.world.draw(this.ctx);
+                this.updateUI();
+                
+                requestAnimationFrame(() => this.loop());
+            }
+
+            updateUI() {
+                document.getElementById('fps').textContent = this.fps;
+                document.getElementById('entityCount').textContent = this.world.entities.length;
+                document.getElementById('foodCount').textContent = this.world.food.length;
+                document.getElementById('particleCount').textContent = this.world.particles.length;
+                
+                const energy = Math.round(this.world.energy);
+                document.getElementById('energyLevel').textContent = energy;
+                document.getElementById('energyBar').style.width = energy + '%';
+                
+                document.getElementById('popCount').textContent = this.world.entities.length;
+                document.getElementById('popCap').textContent = this.world.getPopulationCap();
+                document.getElementById('chatterCount').textContent = this.twitchManager.getChatters().size;
+                
+                if (this.voteManager.active) {
+                    document.getElementById('voteTimer').textContent = this.voteManager.getVoteDuration();
+                    document.getElementById('nextVote').textContent = 'VOTING';
+                } else {
+                    document.getElementById('nextVote').textContent = this.voteManager.getTimeUntilNext();
+                }
+            }
+        }
+
+        // ==========================================
+        // INITIALIZE
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            const game = new Game('gameCanvas');
+            console.log('Chat Life - Session 6: Visual Effects & Polish initialized!');
+        });
+    </script>
+</body>
+</html>
