@@ -82,13 +82,18 @@ class Game {
         const voteIntervalValue = document.getElementById('voteIntervalValue');
         voteIntervalInput.value = CONFIG.voting.interval;
         voteIntervalValue.textContent = CONFIG.voting.interval;
-        
+
         voteIntervalInput.addEventListener('input', (e) => {
             const value = parseInt(e.target.value);
             CONFIG.voting.interval = value;
             voteIntervalValue.textContent = value;
+            
+            // FIXED: Update the timer immediately if not voting
             if (!this.voteManager.active) {
-                this.voteManager.timeUntilNextVote = value;
+                // If the new interval is shorter than current countdown, adjust it
+                if (this.voteManager.timeUntilNextVote > value) {
+                    this.voteManager.timeUntilNextVote = value;
+                }
             }
         });
 
