@@ -258,16 +258,38 @@ class Entity {
     }
 
     updateShape() {
-        if (this.size < 20) {
-            this.shape = 'triangle';
-        } else if (this.size < 30) {
-            this.shape = 'square';
-        } else if (this.size < 40) {
-            this.shape = 'pentagon';
-        } else {
-            this.shape = 'hexagon';
-        }
+    if (this.size < 15) {
+        this.shape = 'triangle';
+        this.sides = 3;
+    } else if (this.size < 20) {
+        this.shape = 'square';
+        this.sides = 4;
+    } else if (this.size < 25) {
+        this.shape = 'pentagon';
+        this.sides = 5;
+    } else if (this.size < 30) {
+        this.shape = 'hexagon';
+        this.sides = 6;
+    } else if (this.size < 35) {
+        this.shape = 'septagon';
+        this.sides = 7;
+    } else if (this.size < 40) {
+        this.shape = 'octagon';
+        this.sides = 8;
+    } else if (this.size < 43) {
+        this.shape = 'nonagon';
+        this.sides = 9;
+    } else if (this.size < 46) {
+        this.shape = 'decagon';
+        this.sides = 10;
+    } else if (this.size < 49) {
+        this.shape = 'hendecagon';
+        this.sides = 11;
+    } else {
+        this.shape = 'dodecagon';
+        this.sides = 12;
     }
+}
 
     update(dt, worldWidth, worldHeight, foodArray, otherEntities) {
         this.health -= CONFIG.entity.healthDecayRate * this.decayMultiplier * dt;
@@ -422,9 +444,7 @@ class Entity {
         
         ctx.beginPath();
         
-        const sides = this.shape === 'triangle' ? 3 :
-                     this.shape === 'square' ? 4 :
-                     this.shape === 'pentagon' ? 5 : 6;
+        const sides = this.sides;
         
         for (let i = 0; i < sides; i++) {
             const angle = (Math.PI * 2 * i / sides) - Math.PI / 2;
