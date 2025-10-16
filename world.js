@@ -75,7 +75,7 @@ class World {
     }
 
     spawnInitialEntities() {
-        const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
+        const names = ['AIA', 'HedgeyByte', 'KotieDev', 'DualWielded', 'PolyMars', 'Barji'];
         for (let i = 0; i < 6; i++) {
             const x = randomRange(100, this.width - 100);
             const y = randomRange(100, this.height - 100);
