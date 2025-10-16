@@ -431,6 +431,38 @@
         </div>
         <div class="setting-description">Animated singularity effect (may reduce performance)</div>
     </div>
+    <div class="setting-item">
+    <div class="setting-label">
+        <span>Weather System</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="weatherToggle" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div class="setting-description">Dynamic weather affecting gameplay</div>
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Biome Territories</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="biomesToggle" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div class="setting-description">Safe, Danger, and Fertile zones</div>
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Random Events</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="eventsToggle" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div class="setting-description">Blood Moon, Aurora, Famine, etc.</div>
+    </div>
     
     <div style="font-weight: bold; color: #4ecca3; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333;">
         Voting
@@ -616,10 +648,13 @@
 
     <!-- External Scripts -->
     <script src="tmi.min.js"></script>
-    <script src="config.js"></script>
-    <script src="entities.js"></script>
-    <script src="managers.js"></script>
-    <script src="world.js"></script>
-    <script src="main.js"></script>
+<script src="config.js"></script>
+<script src="weather.js"></script>
+<script src="biomes.js"></script>
+<script src="events.js"></script>
+<script src="entities.js"></script>
+<script src="managers.js"></script>
+<script src="world.js"></script>
+<script src="main.js"></script>
 </body>
 </html>

@@ -4,30 +4,37 @@
 
 class World {
     constructor(width, height) {
-        this.width = width;
-        this.height = height;
-        this.entities = [];
-        this.food = [];
-        this.particles = [];
-        this.energy = 50;
-        this.deathCount = 0;
-        this.birthCount = 0;
-        
-        this.foodSpawnTimer = 0;
-        this.predatorSpawnTimer = 0;
-        
-        this.screenShake = 0;
-        this.shakeX = 0;
-        this.shakeY = 0;
-        
-        this.deathCamActive = false;
-        this.deathCamTimer = 0;
-        this.deathCamTarget = null;
-        this.timeScale = 1;
-        
-        this.spawnInitialEntities();
-        this.spawnInitialFood();
-    }
+    this.width = width;
+    this.height = height;
+    this.entities = [];
+    this.food = [];
+    this.particles = [];
+    this.energy = 50;
+    this.deathCount = 0;
+    this.birthCount = 0;
+    
+    this.foodSpawnTimer = 0;
+    this.predatorSpawnTimer = 0;
+    
+    this.screenShake = 0;
+    this.shakeX = 0;
+    this.shakeY = 0;
+    
+    this.deathCamActive = false;
+    this.deathCamTimer = 0;
+    this.deathCamTarget = null;
+    this.timeScale = 1;
+    
+    // NEW: Initialize environment systems
+    this.weatherSystem = new WeatherSystem(this);
+    this.biomeSystem = new BiomeSystem(this);
+    this.eventSystem = new EventSystem(this);
+    
+    this.spawnInitialEntities();
+    this.spawnInitialFood();
+}
+
+    
 
     getPopulationCap() {
         const energyPercent = this.energy / 100;
@@ -64,7 +71,7 @@ class World {
         
         const x = randomRange(100, this.width - 100);
         const y = randomRange(100, this.height - 100);
-        const entity = new Entity(x, y, username);
+        const entity = new Entity(x, y, username, null, null, 0, null, this);  // Pass this
         entity.isChatter = true;
         entity.hue = (username.charCodeAt(0) * 137.5) % 360;
         this.entities.push(entity);
@@ -79,7 +86,7 @@ class World {
         for (let i = 0; i < 6; i++) {
             const x = randomRange(100, this.width - 100);
             const y = randomRange(100, this.height - 100);
-            this.entities.push(new Entity(x, y, names[i]));
+            this.entities.push(new Entity(x, y, names[i], null, null, 0, null, this));  // Pass this
         }
     }
 
@@ -187,6 +194,10 @@ class World {
 
     update(dt) {
         const scaledDt = dt * this.timeScale;
+
+        this.weatherSystem.update(scaledDt);
+        this.biomeSystem.update?.(scaledDt); // Optional if biomes need updating
+        this.eventSystem.update(scaledDt);
         
         if (this.deathCamActive) {
             this.deathCamTimer -= dt;
@@ -214,12 +225,14 @@ class World {
         );
         
         const energyMultiplier = this.energy / 100;
+        const weatherMult = this.weatherSystem.getFoodSpawnMult();
+        const eventMult = this.eventSystem.getFoodSpawnMult();
         const adjustedSpawnInterval = CONFIG.food.spawnInterval / (0.5 + energyMultiplier);
         
         this.foodSpawnTimer += scaledDt;
-        if (this.foodSpawnTimer >= adjustedSpawnInterval) {
+        if (this.foodSpawnTimer >= adjustedSpawnInterval && !this.eventSystem.shouldBlockFoodSpawn()) {
             this.foodSpawnTimer = 0;
-            const spawnAmount = Math.ceil(CONFIG.food.spawnAmount * energyMultiplier);
+            const spawnAmount = Math.ceil(CONFIG.food.spawnAmount * energyMultiplier * weatherMult * eventMult);
             for (let i = 0; i < spawnAmount; i++) {
                 this.spawnFood();
             }
@@ -296,9 +309,9 @@ class World {
             const name = names[Math.floor(Math.random() * names.length)];
             
             if (Math.random() < CONFIG.predator.spawnChance) {
-                this.entities.push(new Predator(x, y));
+                this.entities.push(new Predator(x, y, this));  // Pass this
             } else {
-                this.entities.push(new Entity(x, y, name));
+                this.entities.push(new Entity(x, y, name, null, null, 0, null, this));  // Pass this
             }
         }
     }
@@ -317,6 +330,8 @@ class World {
         ctx.fillStyle = `hsl(240, 30%, ${bgBrightness}%)`;
         ctx.fillRect(0, 0, this.width, this.height);
     }
+
+    this.biomeSystem.draw(ctx);
     
     for (const particle of this.particles) {
         particle.draw(ctx);
@@ -329,6 +344,12 @@ class World {
     for (const entity of this.entities) {
         entity.draw(ctx);
     }
+
+     // NEW: Draw weather overlay
+    this.weatherSystem.draw(ctx, this.width, this.height);
+    
+    // NEW: Draw event overlay
+    this.eventSystem.draw(ctx, this.width, this.height)
     
     ctx.restore();
     }

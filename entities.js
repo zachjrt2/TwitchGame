@@ -159,19 +159,21 @@ class Food {
 // ENTITY CLASS
 // ==========================================
 class Entity {
-    constructor(x, y, baseName = "Entity", parentSize = null, parentMutation = null, parentGeneration = 0, parentMutationStack = null) {
+    constructor(x, y, baseName = "Entity", parentSize = null, parentMutation = null, parentGeneration = 0, parentMutationStack = null, world = null) {
         this.x = x;
         this.y = y;
         this.baseName = baseName;
         this.isPredator = false;
         this.generation = parentGeneration;
+        this.world = world;
+        this.maxSizeReachedAt = null;
         
         // Mutation stack tracking
         this.mutationStack = parentMutationStack ? {...parentMutationStack} : {};
         
         // Determine if new mutation occurs
         this.mutation = parentMutation;
-        if (Math.random() < CONFIG.entity.mutationChance) {
+        if (Math.random() < CONFIG.entity.mutationChance * (this.world?.eventSystem?.getMutationMult?.() ?? 1)) {
             const mutTypes = Object.keys(MUTATIONS);
             const mutKey = mutTypes[Math.floor(Math.random() * mutTypes.length)];
             this.mutation = MUTATIONS[mutKey];
@@ -259,43 +261,53 @@ class Entity {
     }
 
     updateShape() {
-    if (this.size < 15) {
-        this.shape = 'triangle';
-        this.sides = 3;
-    } else if (this.size < 20) {
-        this.shape = 'square';
-        this.sides = 4;
-    } else if (this.size < 25) {
-        this.shape = 'pentagon';
-        this.sides = 5;
-    } else if (this.size < 30) {
-        this.shape = 'hexagon';
-        this.sides = 6;
-    } else if (this.size < 35) {
-        this.shape = 'septagon';
-        this.sides = 7;
-    } else if (this.size < 40) {
-        this.shape = 'octagon';
-        this.sides = 8;
-    } else if (this.size < 43) {
-        this.shape = 'nonagon';
-        this.sides = 9;
-    } else if (this.size < 46) {
-        this.shape = 'decagon';
-        this.sides = 10;
-    } else if (this.size < 49) {
-        this.shape = 'hendecagon';
-        this.sides = 11;
-    } else {
-        this.shape = 'dodecagon';
-        this.sides = 12;
+        // Size caps at maxSize, but sides keep increasing
+        if (this.size < CONFIG.entity.maxSize) {
+            // Normal growth with sides
+            if (this.size < 18) {
+                this.shape = 'triangle';
+                this.sides = 3;
+            } else if (this.size < 21) {
+                this.shape = 'square';
+                this.sides = 4;
+            } else if (this.size < 24) {
+                this.shape = 'pentagon';
+                this.sides = 5;
+            } else if (this.size < 27) {
+                this.shape = 'hexagon';
+                this.sides = 6;
+            } else if (this.size < 30) {
+                this.shape = 'septagon';
+                this.sides = 7;
+            } else if (this.size < 33) {
+                this.shape = 'octagon';
+                this.sides = 8;
+            } else {
+                this.shape = 'nonagon';
+                this.sides = 9;
+            }
+        } else {
+            // At max size, keep adding sides without growing
+            // Calculate sides based on age after reaching max size
+            if (!this.maxSizeReachedAt) {
+                this.maxSizeReachedAt = this.age;
+                this.sides = 9; // Start at nonagon when maxed
+            } else {
+                const timeSinceMax = this.age - this.maxSizeReachedAt;
+                // Add 1 side every 10 seconds, cap at 20 sides
+                this.sides = Math.min(9 + Math.floor(timeSinceMax / 10), 20);
+                this.shape = `${this.sides}-gon`;
+            }
+        }
     }
-}
 
     update(dt, worldWidth, worldHeight, foodArray, otherEntities) {
-        this.health -= CONFIG.entity.healthDecayRate * this.decayMultiplier * dt;
-        this.timeSinceReproduction += dt;
+        const biomeHungerMult = this.world?.biomeSystem.getHungerMultAt(this.x, this.y) || 1.0;
+        const weatherHungerMult = this.world?.weatherSystem.getHungerMult() || 1.0;
         
+        this.health -= CONFIG.entity.healthDecayRate * this.decayMultiplier * biomeHungerMult * weatherHungerMult * dt;
+        this.timeSinceReproduction += dt;
+            
         if (this.health <= 0) {
             this.health = 0;
             this.alive = false;
@@ -303,18 +315,21 @@ class Entity {
         }
         
         if (this.health > 70 && this.size < CONFIG.entity.maxSize) {
-            this.size += CONFIG.entity.growthRate * dt;
+            const biomeGrowthMult = this.world?.biomeSystem.getGrowthMultAt(this.x, this.y) || 1.0;
+            this.size += CONFIG.entity.growthRate * biomeGrowthMult * dt;
             this.size = Math.min(this.size, CONFIG.entity.maxSize);
             this.updateShape();
         }
         
+        const detectionRange = CONFIG.entity.foodDetectionRange * (this.world?.weatherSystem.getDetectionMult() || 1.0);
+    
         let nearestFood = null;
         let nearestDist = Infinity;
-        
+    
         for (const food of foodArray) {
             if (!food.alive) continue;
             const dist = distance(this.x, this.y, food.x, food.y);
-            if (dist < nearestDist && dist < CONFIG.entity.foodDetectionRange) {
+            if (dist < nearestDist && dist < detectionRange) {
                 nearestDist = dist;
                 nearestFood = food;
             }
@@ -338,12 +353,13 @@ class Entity {
         
         for (const other of otherEntities) {
             if (other === this || !other.alive) continue;
-            
-            const dist = distance(this.x, this.y, other.x, other.y);
-            const minDist = this.size + other.size;
-            
-            if (dist < minDist) {
-                this.health -= CONFIG.entity.collisionDamage * dt;
+        
+        const dist = distance(this.x, this.y, other.x, other.y);
+        const minDist = this.size + other.size;
+        
+        if (dist < minDist) {
+            const eventDamageMult = this.world?.eventSystem.getCollisionDamageMult() || 1.0;
+            this.health -= CONFIG.entity.collisionDamage * eventDamageMult * dt;
                 
                 const overlap = minDist - dist;
                 const pushX = (this.x - other.x) / dist * overlap * 0.5;
@@ -418,7 +434,7 @@ class Entity {
         const childX = this.x + Math.cos(angle) * dist;
         const childY = this.y + Math.sin(angle) * dist;
         
-        return new Entity(childX, childY, this.baseName, this.size, this.mutation, this.generation + 1, this.mutationStack);
+        return new Entity(childX, childY, this.baseName, this.size, this.mutation, this.generation + 1, this.mutationStack, this.world);  // Pass world
     }
 
     draw(ctx) {
@@ -445,10 +461,8 @@ class Entity {
         
         ctx.beginPath();
         
-        const sides = this.sides;
-        
-        for (let i = 0; i < sides; i++) {
-            const angle = (Math.PI * 2 * i / sides) - Math.PI / 2;
+        for (let i = 0; i < this.sides; i++) {
+            const angle = (Math.PI * 2 * i / this.sides) - Math.PI / 2;
             const x = Math.cos(angle) * this.size;
             const y = Math.sin(angle) * this.size;
             
@@ -464,6 +478,14 @@ class Entity {
         ctx.stroke();
         
         ctx.shadowBlur = 0;
+
+        if (this.sides >= 10) {  // Only show for 10+ sides to avoid clutter
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.font = 'bold 10px Courier New';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.sides, 0, 0);
+        }
         
         const barWidth = this.size * 2;
         const barHeight = 4;
@@ -488,8 +510,8 @@ class Entity {
 // PREDATOR CLASS
 // ==========================================
 class Predator extends Entity {
-    constructor(x, y) {
-        super(x, y, "PREDATOR", null, null, 0, null);
+    constructor(x, y, world = null) {
+        super(x, y, "PREDATOR", null, null, 0, null, world);  // Pass world
         this.isPredator = true;
         this.size = CONFIG.predator.baseSize;
         this.speed = CONFIG.predator.speed;
@@ -498,7 +520,7 @@ class Predator extends Entity {
         this.health = 150;
         this.target = null;
         this.attackCooldown = 0;
-        this.name = "PREDATOR"; // Override name building
+        this.name = "PREDATOR";
     }
 
     update(dt, worldWidth, worldHeight, foodArray, otherEntities) {

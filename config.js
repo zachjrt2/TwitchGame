@@ -7,12 +7,12 @@ const CONFIG = {
         width: 1200,
         height: 800
     },
-     background: {
-        enabled: false  // NEW - off by default
+    background: {
+        enabled: true
     },
-    entity: {
+        entity: {
         baseSize: 15,
-        maxSize: 60,
+        maxSize: 35,  // Changed from 60 - entities cap earlier
         baseSpeed: 50,
         speedVariance: 30,
         wanderStrength: 2,
@@ -23,24 +23,24 @@ const CONFIG = {
         foodAttractionStrength: 3,
         eatRange: 15,
         foodEnergyGain: 25,
-        growthRate: 0.3,
+        growthRate: 0.15,  // Changed from 0.3 - slower growth
         collisionDamage: 5,
         reproductionThreshold: 80,
         reproductionCost: 40,
         reproductionCooldown: 10,
         mutationChance: 0.05,
         trailLength: 10,
-        sizeScaler: 1.0,      // NEW
-        healthScaler: 1.0     // NEW
-    },
+        sizeScaler: 1.0,
+        healthScaler: 1.0
+},
     predator: {
         spawnChance: 0.02,
-        spawnInterval: 30,     // NEW - configurable
+        spawnInterval: 30,
         baseSize: 25,
         speed: 80,
         detectionRange: 200,
         attackDamage: 30,
-        attackScaler: 1.0,     // NEW
+        attackScaler: 1.0,
         attackRange: 20
     },
     food: {
@@ -72,7 +72,8 @@ const CONFIG = {
             { command: '!food', name: 'Spawn Food', description: 'Add 20 food items' },
             { command: '!bomb', name: 'Meteor Strike', description: 'Damage random area' },
             { command: '!heal', name: 'Heal All', description: 'Restore all health' },
-            { command: '!spawn', name: 'Spawn Entity', description: 'Add 3 new creatures' }
+            { command: '!spawn', name: 'Spawn Entity', description: 'Add 3 new creatures' },
+            { command: '!event', name: 'Random Event', description: 'Trigger special event' }
         ]
     },
     effects: {
@@ -80,6 +81,114 @@ const CONFIG = {
         screenShakeDuration: 0.5,
         deathCamDuration: 1.5,
         deathCamSlowmo: 0.3
+    },
+    weather: {
+        enabled: true,
+        changeDuration: 45,  // How long weather lasts (seconds)
+        transitionDuration: 5  // How long transition takes (seconds)
+    },
+    biomes: {
+        enabled: true,
+        count: 3  // Number of biome circles
+    },
+    events: {
+        enabled: true,
+        minInterval: 60,  // Minimum time between random events
+        maxInterval: 180,  // Maximum time between random events
+        duration: 20  // How long events last
+    }
+};
+
+// Weather types
+const WEATHER = {
+    CLEAR: {
+        name: 'Clear',
+        foodSpawnMult: 1.0,
+        hungerMult: 1.0,
+        speedMult: 1.0,
+        color: null
+    },
+    RAIN: {
+        name: 'Rain',
+        foodSpawnMult: 1.5,
+        hungerMult: 0.8,
+        speedMult: 0.7,
+        color: 'rgba(100, 150, 200, 0.2)'
+    },
+    DROUGHT: {
+        name: 'Drought',
+        foodSpawnMult: 0.5,
+        hungerMult: 1.5,
+        speedMult: 1.2,
+        color: 'rgba(200, 150, 100, 0.2)'
+    },
+    FOG: {
+        name: 'Fog',
+        foodSpawnMult: 1.0,
+        hungerMult: 1.0,
+        speedMult: 0.8,
+        detectionMult: 0.6,
+        color: 'rgba(180, 180, 200, 0.3)'
+    }
+};
+
+// Biome types
+const BIOMES = {
+    SAFE: {
+        name: 'Safe Zone',
+        color: 'rgba(100, 255, 150, 0.15)',
+        hungerMult: 0.6,
+        predatorImmune: true,
+        borderColor: 'rgba(100, 255, 150, 0.4)'
+    },
+    DANGER: {
+        name: 'Danger Zone',
+        color: 'rgba(255, 100, 100, 0.15)',
+        hungerMult: 1.3,
+        growthMult: 1.5,
+        predatorAttraction: true,
+        borderColor: 'rgba(255, 100, 100, 0.4)'
+    },
+    FERTILE: {
+        name: 'Fertile Zone',
+        color: 'rgba(100, 200, 255, 0.15)',
+        foodSpawnMult: 2.0,
+        hungerMult: 0.8,
+        borderColor: 'rgba(100, 200, 255, 0.4)'
+    }
+};
+
+// Special events
+const EVENTS = {
+    BLOOD_MOON: {
+        name: 'Blood Moon',
+        description: 'All entities become aggressive!',
+        collisionDamageMult: 3.0,
+        color: 'rgba(150, 0, 0, 0.3)'
+    },
+    AURORA: {
+        name: 'Aurora',
+        description: 'Mutation rates skyrocket!',
+        mutationMult: 10.0,
+        color: 'rgba(100, 255, 200, 0.2)'
+    },
+    EVOLUTION_BOOM: {
+        name: 'Evolution Boom',
+        description: 'Mass reproduction event!',
+        reproductionBoost: true,
+        color: 'rgba(255, 200, 100, 0.2)'
+    },
+    FAMINE: {
+        name: 'Famine',
+        description: 'All food vanishes!',
+        noFoodSpawn: true,
+        color: 'rgba(100, 100, 80, 0.3)'
+    },
+    ABUNDANCE: {
+        name: 'Abundance',
+        description: 'Food everywhere!',
+        foodSpawnMult: 5.0,
+        color: 'rgba(150, 255, 150, 0.2)'
     }
 };
 
@@ -122,6 +231,15 @@ function saveSettings() {
         twitch: {
             populationCapMin: CONFIG.twitch.populationCapMin,
             populationCapMax: CONFIG.twitch.populationCapMax
+        },
+        weather: {
+            enabled: CONFIG.weather.enabled
+        },
+        biomes: {
+            enabled: CONFIG.biomes.enabled
+        },
+        events: {
+            enabled: CONFIG.events.enabled
         }
     };
     
@@ -166,6 +284,18 @@ function loadSettings() {
         if (settings.twitch) {
             CONFIG.twitch.populationCapMin = settings.twitch.populationCapMin || CONFIG.twitch.populationCapMin;
             CONFIG.twitch.populationCapMax = settings.twitch.populationCapMax || CONFIG.twitch.populationCapMax;
+        }
+        
+        if (settings.weather !== undefined) {
+            CONFIG.weather.enabled = settings.weather.enabled !== false;
+        }
+        
+        if (settings.biomes !== undefined) {
+            CONFIG.biomes.enabled = settings.biomes.enabled !== false;
+        }
+        
+        if (settings.events !== undefined) {
+            CONFIG.events.enabled = settings.events.enabled !== false;
         }
         
         console.log('Settings loaded!');

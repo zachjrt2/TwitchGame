@@ -109,8 +109,15 @@ class Game {
             
             valueSpan.textContent = formatter(newValue);
             saveSettings();
+            });
+        };
+
+        const weatherToggle = document.getElementById('weatherToggle');
+        weatherToggle.checked = CONFIG.weather.enabled;
+        weatherToggle.addEventListener('change', (e) => {
+            CONFIG.weather.enabled = e.target.checked;
+            saveSettings();
         });
-    };
     
         // Voting Settings
         setupSetting('voteInterval', 'voteIntervalValue', 'voting.interval');
