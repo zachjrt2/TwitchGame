@@ -7,15 +7,18 @@ const CONFIG = {
         width: 1200,
         height: 800
     },
+     background: {
+        enabled: false  // NEW - off by default
+    },
     entity: {
         baseSize: 15,
-        maxSize: 50,
+        maxSize: 60,
         baseSpeed: 50,
         speedVariance: 30,
         wanderStrength: 2,
         maxHealth: 100,
         startingHealth: 100,
-        healthDecayRate: 1.5,  // Configurable
+        healthDecayRate: 1.5,
         foodDetectionRange: 120,
         foodAttractionStrength: 3,
         eatRange: 15,
@@ -24,22 +27,26 @@ const CONFIG = {
         collisionDamage: 5,
         reproductionThreshold: 80,
         reproductionCost: 40,
-        reproductionCooldown: 10,  // Configurable
+        reproductionCooldown: 10,
         mutationChance: 0.05,
-        trailLength: 10
+        trailLength: 10,
+        sizeScaler: 1.0,      // NEW
+        healthScaler: 1.0     // NEW
     },
     predator: {
         spawnChance: 0.02,
+        spawnInterval: 30,     // NEW - configurable
         baseSize: 25,
         speed: 80,
         detectionRange: 200,
         attackDamage: 30,
+        attackScaler: 1.0,     // NEW
         attackRange: 20
     },
     food: {
         size: 6,
-        spawnInterval: 2,  // Configurable
-        spawnAmount: 3,    // Configurable
+        spawnInterval: 2,
+        spawnAmount: 3,
         dropOnDeath: 2
     },
     twitch: {
@@ -49,7 +56,6 @@ const CONFIG = {
         maxEnergy: 100,
         populationCapMin: 10,
         populationCapMax: 30,
-        // Chatter spawn chance based on viewer count
         chatterSpawnRates: {
             verySmall: { threshold: 10, chance: 1.0 },
             small: { threshold: 50, chance: 0.8 },
@@ -87,6 +93,90 @@ const MUTATIONS = {
 };
 
 // ==========================================
+// SETTINGS PERSISTENCE
+// ==========================================
+function saveSettings() {
+    const settings = {
+        background: {
+            enabled: CONFIG.background.enabled
+        },
+        voting: {
+            interval: CONFIG.voting.interval,
+            duration: CONFIG.voting.duration,
+            cooldown: CONFIG.voting.cooldown
+        },
+        food: {
+            spawnInterval: CONFIG.food.spawnInterval,
+            spawnAmount: CONFIG.food.spawnAmount
+        },
+        entity: {
+            healthDecayRate: CONFIG.entity.healthDecayRate,
+            reproductionCooldown: CONFIG.entity.reproductionCooldown,
+            sizeScaler: CONFIG.entity.sizeScaler,
+            healthScaler: CONFIG.entity.healthScaler
+        },
+        predator: {
+            spawnInterval: CONFIG.predator.spawnInterval,
+            attackScaler: CONFIG.predator.attackScaler
+        },
+        twitch: {
+            populationCapMin: CONFIG.twitch.populationCapMin,
+            populationCapMax: CONFIG.twitch.populationCapMax
+        }
+    };
+    
+    localStorage.setItem('chatLifeSettings', JSON.stringify(settings));
+    console.log('Settings saved!');
+}
+
+function loadSettings() {
+    const saved = localStorage.getItem('chatLifeSettings');
+    if (!saved) return false;
+    
+    try {
+        const settings = JSON.parse(saved);
+        
+        if (settings.background !== undefined) {
+            CONFIG.background.enabled = settings.background.enabled || false;
+        }
+        
+        if (settings.voting) {
+            CONFIG.voting.interval = settings.voting.interval || CONFIG.voting.interval;
+            CONFIG.voting.duration = settings.voting.duration || CONFIG.voting.duration;
+            CONFIG.voting.cooldown = settings.voting.cooldown || CONFIG.voting.cooldown;
+        }
+        
+        if (settings.food) {
+            CONFIG.food.spawnInterval = settings.food.spawnInterval || CONFIG.food.spawnInterval;
+            CONFIG.food.spawnAmount = settings.food.spawnAmount || CONFIG.food.spawnAmount;
+        }
+        
+        if (settings.entity) {
+            CONFIG.entity.healthDecayRate = settings.entity.healthDecayRate || CONFIG.entity.healthDecayRate;
+            CONFIG.entity.reproductionCooldown = settings.entity.reproductionCooldown || CONFIG.entity.reproductionCooldown;
+            CONFIG.entity.sizeScaler = settings.entity.sizeScaler || CONFIG.entity.sizeScaler;
+            CONFIG.entity.healthScaler = settings.entity.healthScaler || CONFIG.entity.healthScaler;
+        }
+        
+        if (settings.predator) {
+            CONFIG.predator.spawnInterval = settings.predator.spawnInterval || CONFIG.predator.spawnInterval;
+            CONFIG.predator.attackScaler = settings.predator.attackScaler || CONFIG.predator.attackScaler;
+        }
+        
+        if (settings.twitch) {
+            CONFIG.twitch.populationCapMin = settings.twitch.populationCapMin || CONFIG.twitch.populationCapMin;
+            CONFIG.twitch.populationCapMax = settings.twitch.populationCapMax || CONFIG.twitch.populationCapMax;
+        }
+        
+        console.log('Settings loaded!');
+        return true;
+    } catch (e) {
+        console.error('Failed to load settings:', e);
+        return false;
+    }
+}
+
+// ==========================================
 // UTILITY FUNCTIONS
 // ==========================================
 function randomRange(min, max) {
@@ -107,7 +197,6 @@ function clamp(val, min, max) {
     return Math.min(Math.max(val, min), max);
 }
 
-// Get chatter spawn chance based on viewer count
 function getChatterSpawnChance(viewerCount) {
     const rates = CONFIG.twitch.chatterSpawnRates;
     

@@ -75,7 +75,7 @@ class World {
     }
 
     spawnInitialEntities() {
-        const names = ['AIA', 'HedgeByte', 'KotieDev', 'DualWielded', 'PolyMars', 'Barji'];
+        const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
         for (let i = 0; i < 6; i++) {
             const x = randomRange(100, this.width - 100);
             const y = randomRange(100, this.height - 100);
@@ -94,6 +94,96 @@ class World {
         const fy = y !== null ? y : randomRange(50, this.height - 50);
         this.food.push(new Food(fx, fy));
     }
+
+    drawBackground(ctx) {
+    const centerX = this.width / 2;
+    const centerY = this.height / 2;
+    const time = Date.now() * 0.0003; // Slow rotation
+    
+    ctx.save();
+    
+    // Base background
+    const bgBrightness = Math.floor(lerp(10, 30, this.energy / 100));
+    ctx.fillStyle = `hsl(240, 30%, ${bgBrightness}%)`;
+    ctx.fillRect(0, 0, this.width, this.height);
+    
+    // Wireframe grid
+    ctx.strokeStyle = `hsla(180, 70%, 50%, ${0.15 + (this.energy / 100) * 0.1})`;
+    ctx.lineWidth = 1;
+    
+    const gridSize = 60;
+    const gridLines = 20;
+    
+    // Rotate slightly over time
+    ctx.translate(centerX, centerY);
+    ctx.rotate(time);
+    ctx.translate(-centerX, -centerY);
+    
+    // Draw warped grid
+    for (let i = -gridLines; i <= gridLines; i++) {
+        ctx.beginPath();
+        for (let j = -gridLines; j <= gridLines; j++) {
+            const x = centerX + i * gridSize;
+            const y = centerY + j * gridSize;
+            
+            // Calculate distance from center
+            const dx = x - centerX;
+            const dy = y - centerY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            // Warp effect - pull toward center
+            const warpStrength = 0.3;
+            const maxDist = Math.sqrt(this.width * this.width + this.height * this.height) / 2;
+            const warp = Math.pow(1 - Math.min(dist / maxDist, 1), 2) * warpStrength;
+            
+            const warpX = x - dx * warp;
+            const warpY = y - dy * warp;
+            
+            if (j === -gridLines) {
+                ctx.moveTo(warpX, warpY);
+            } else {
+                ctx.lineTo(warpX, warpY);
+            }
+        }
+        ctx.stroke();
+    }
+    
+    // Draw perpendicular lines
+    for (let j = -gridLines; j <= gridLines; j++) {
+        ctx.beginPath();
+        for (let i = -gridLines; i <= gridLines; i++) {
+            const x = centerX + i * gridSize;
+            const y = centerY + j * gridSize;
+            
+            const dx = x - centerX;
+            const dy = y - centerY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            const warpStrength = 0.3;
+            const maxDist = Math.sqrt(this.width * this.width + this.height * this.height) / 2;
+            const warp = Math.pow(1 - Math.min(dist / maxDist, 1), 2) * warpStrength;
+            
+            const warpX = x - dx * warp;
+            const warpY = y - dy * warp;
+            
+            if (i === -gridLines) {
+                ctx.moveTo(warpX, warpY);
+            } else {
+                ctx.lineTo(warpX, warpY);
+            }
+        }
+        ctx.stroke();
+    }
+    
+    // Central glow
+    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 200);
+    gradient.addColorStop(0, `hsla(180, 80%, 60%, ${0.05 + (this.energy / 100) * 0.05})`);
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, this.width, this.height);
+    
+    ctx.restore();
+}
 
     update(dt) {
         const scaledDt = dt * this.timeScale;
@@ -136,7 +226,7 @@ class World {
         }
         
         this.predatorSpawnTimer += scaledDt;
-        if (this.predatorSpawnTimer >= 30) {
+        if (this.predatorSpawnTimer >= CONFIG.predator.spawnInterval) {  // Changed from 30
             this.predatorSpawnTimer = 0;
             if (Math.random() < 0.3 && this.entities.length > 5) {
                 const x = randomRange(100, this.width - 100);
@@ -213,28 +303,34 @@ class World {
         }
     }
 
-    draw(ctx) {
-        ctx.save();
-        
-        ctx.translate(this.shakeX, this.shakeY);
-        
+  draw(ctx) {
+    ctx.save();
+    
+    ctx.translate(this.shakeX, this.shakeY);
+    
+    // Only draw background if enabled
+    if (CONFIG.background.enabled) {
+        this.drawBackground(ctx);
+    } else {
+        // Simple solid background
         const bgBrightness = Math.floor(lerp(10, 30, this.energy / 100));
         ctx.fillStyle = `hsl(240, 30%, ${bgBrightness}%)`;
         ctx.fillRect(0, 0, this.width, this.height);
-        
-        for (const particle of this.particles) {
-            particle.draw(ctx);
-        }
-        
-        for (const food of this.food) {
-            food.draw(ctx);
-        }
-        
-        for (const entity of this.entities) {
-            entity.draw(ctx);
-        }
-        
-        ctx.restore();
+    }
+    
+    for (const particle of this.particles) {
+        particle.draw(ctx);
+    }
+    
+    for (const food of this.food) {
+        food.draw(ctx);
+    }
+    
+    for (const entity of this.entities) {
+        entity.draw(ctx);
+    }
+    
+    ctx.restore();
     }
 
     getMutationCount() {

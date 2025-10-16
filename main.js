@@ -77,96 +77,76 @@ class Game {
     }
 
     setupSettings() {
-        // Vote Interval
-        const voteIntervalInput = document.getElementById('voteInterval');
-        const voteIntervalValue = document.getElementById('voteIntervalValue');
-        voteIntervalInput.value = CONFIG.voting.interval;
-        voteIntervalValue.textContent = CONFIG.voting.interval;
-
-        voteIntervalInput.addEventListener('input', (e) => {
-            const value = parseInt(e.target.value);
-            CONFIG.voting.interval = value;
-            voteIntervalValue.textContent = value;
+    // Load saved settings on startup
+    loadSettings();
+    
+    // Helper function to setup a setting with auto-save
+    const setupSetting = (inputId, valueId, configPath, formatter = (v) => v) => {
+        const input = document.getElementById(inputId);
+        const valueSpan = document.getElementById(valueId);
+        
+        // Get nested config value
+        const keys = configPath.split('.');
+        let value = CONFIG;
+        for (const key of keys) {
+            value = value[key];
+        }
+        
+        input.value = value;
+        valueSpan.textContent = formatter(value);
+        
+        input.addEventListener('input', (e) => {
+            const newValue = e.target.type === 'range' ? 
+                (e.target.step.includes('.') ? parseFloat(e.target.value) : parseInt(e.target.value)) : 
+                e.target.value;
             
-            // FIXED: Update the timer immediately if not voting
-            if (!this.voteManager.active) {
-                // If the new interval is shorter than current countdown, adjust it
-                if (this.voteManager.timeUntilNextVote > value) {
-                    this.voteManager.timeUntilNextVote = value;
-                }
+            // Set nested config value
+            let obj = CONFIG;
+            for (let i = 0; i < keys.length - 1; i++) {
+                obj = obj[keys[i]];
             }
+            obj[keys[keys.length - 1]] = newValue;
+            
+            valueSpan.textContent = formatter(newValue);
+            saveSettings();
         });
-
-        // Vote Duration
-        const voteDurationInput = document.getElementById('voteDuration');
-        const voteDurationValue = document.getElementById('voteDurationValue');
-        voteDurationInput.value = CONFIG.voting.duration;
-        voteDurationValue.textContent = CONFIG.voting.duration;
+    };
+    
+        // Voting Settings
+        setupSetting('voteInterval', 'voteIntervalValue', 'voting.interval');
+        setupSetting('voteDuration', 'voteDurationValue', 'voting.duration');
+        setupSetting('voteCooldown', 'voteCooldownValue', 'voting.cooldown');
         
-        voteDurationInput.addEventListener('input', (e) => {
-            const value = parseInt(e.target.value);
-            CONFIG.voting.duration = value;
-            voteDurationValue.textContent = value;
+        // Food Settings
+        setupSetting('foodInterval', 'foodIntervalValue', 'food.spawnInterval', v => v.toFixed(1));
+        setupSetting('foodAmount', 'foodAmountValue', 'food.spawnAmount');
+        
+        // Entity Settings
+        setupSetting('hungerRate', 'hungerRateValue', 'entity.healthDecayRate', v => v.toFixed(1));
+        setupSetting('birthCooldown', 'birthCooldownValue', 'entity.reproductionCooldown');
+        setupSetting('sizeScaler', 'sizeScalerValue', 'entity.sizeScaler', v => v.toFixed(2) + 'x');
+        setupSetting('healthScaler', 'healthScalerValue', 'entity.healthScaler', v => v.toFixed(2) + 'x');
+        
+        // Predator Settings
+        setupSetting('predatorInterval', 'predatorIntervalValue', 'predator.spawnInterval');
+        setupSetting('attackScaler', 'attackScalerValue', 'predator.attackScaler', v => v.toFixed(2) + 'x');
+
+        setupSetting('populationMin', 'populationMinValue', 'twitch.populationCapMin');
+        setupSetting('populationMax', 'populationMaxValue', 'twitch.populationCapMax');
+
+        const bgToggle = document.getElementById('backgroundToggle');
+        bgToggle.checked = CONFIG.background.enabled;
+        
+        bgToggle.addEventListener('change', (e) => {
+            CONFIG.background.enabled = e.target.checked;
+            saveSettings(); 
         });
-
-        // Vote Cooldown
-        const voteCooldownInput = document.getElementById('voteCooldown');
-        const voteCooldownValue = document.getElementById('voteCooldownValue');
-        voteCooldownInput.value = CONFIG.voting.cooldown;
-        voteCooldownValue.textContent = CONFIG.voting.cooldown;
         
-        voteCooldownInput.addEventListener('input', (e) => {
-            const value = parseInt(e.target.value);
-            CONFIG.voting.cooldown = value;
-            voteCooldownValue.textContent = value;
-        });
-
-        // Food Spawn Interval
-        const foodIntervalInput = document.getElementById('foodInterval');
-        const foodIntervalValue = document.getElementById('foodIntervalValue');
-        foodIntervalInput.value = CONFIG.food.spawnInterval;
-        foodIntervalValue.textContent = CONFIG.food.spawnInterval;
-        
-        foodIntervalInput.addEventListener('input', (e) => {
-            const value = parseFloat(e.target.value);
-            CONFIG.food.spawnInterval = value;
-            foodIntervalValue.textContent = value;
-        });
-
-        // Food Spawn Amount
-        const foodAmountInput = document.getElementById('foodAmount');
-        const foodAmountValue = document.getElementById('foodAmountValue');
-        foodAmountInput.value = CONFIG.food.spawnAmount;
-        foodAmountValue.textContent = CONFIG.food.spawnAmount;
-        
-        foodAmountInput.addEventListener('input', (e) => {
-            const value = parseInt(e.target.value);
-            CONFIG.food.spawnAmount = value;
-            foodAmountValue.textContent = value;
-        });
-
-        // Hunger Rate (Health Decay)
-        const hungerRateInput = document.getElementById('hungerRate');
-        const hungerRateValue = document.getElementById('hungerRateValue');
-        hungerRateInput.value = CONFIG.entity.healthDecayRate;
-        hungerRateValue.textContent = CONFIG.entity.healthDecayRate.toFixed(1);
-        
-        hungerRateInput.addEventListener('input', (e) => {
-            const value = parseFloat(e.target.value);
-            CONFIG.entity.healthDecayRate = value;
-            hungerRateValue.textContent = value.toFixed(1);
-        });
-
-        // Birth Cooldown
-        const birthCooldownInput = document.getElementById('birthCooldown');
-        const birthCooldownValue = document.getElementById('birthCooldownValue');
-        birthCooldownInput.value = CONFIG.entity.reproductionCooldown;
-        birthCooldownValue.textContent = CONFIG.entity.reproductionCooldown;
-        
-        birthCooldownInput.addEventListener('input', (e) => {
-            const value = parseInt(e.target.value);
-            CONFIG.entity.reproductionCooldown = value;
-            birthCooldownValue.textContent = value;
+        // Special handling for vote interval (to update timer)
+        document.getElementById('voteInterval').addEventListener('input', () => {
+            if (!this.voteManager.active && this.voteManager.timeUntilNextVote > CONFIG.voting.interval) {
+                this.voteManager.timeUntilNextVote = CONFIG.voting.interval;
+            }
         });
     }
 

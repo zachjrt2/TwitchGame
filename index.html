@@ -354,6 +354,51 @@
             color: #888;
             margin-top: 3px;
         }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #333;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #666;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #4ecca3;
+        }
+
+        input:checked + .toggle-slider:before {
+            background-color: white;
+            transform: translateX(26px);
+        }
     </style>
 </head>
 <body>
@@ -370,92 +415,173 @@
     <button class="settings-btn" id="settingsBtn">⚙️</button>
     
     <div class="settings-panel" id="settingsPanel">
-        <div class="settings-title">SETTINGS</div>
-        
-        <div style="font-weight: bold; color: #4ecca3; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333;">
-            Voting
-        </div>
-        
-        <div class="setting-item">
-            <div class="setting-label">
-                <span>Vote Interval</span>
-                <span class="setting-value"><span id="voteIntervalValue">180</span>s</span>
-            </div>
-            <input type="range" id="voteInterval" min="30" max="600" step="30">
-            <div class="setting-description">Time between votes</div>
-        </div>
-        
-        <div class="setting-item">
-            <div class="setting-label">
-                <span>Vote Duration</span>
-                <span class="setting-value"><span id="voteDurationValue">30</span>s</span>
-            </div>
-            <input type="range" id="voteDuration" min="10" max="120" step="5">
-            <div class="setting-description">How long voting lasts</div>
-        </div>
-        
-        <div class="setting-item">
-            <div class="setting-label">
-                <span>Vote Cooldown</span>
-                <span class="setting-value"><span id="voteCooldownValue">30</span>s</span>
-            </div>
-            <input type="range" id="voteCooldown" min="0" max="120" step="10">
-            <div class="setting-description">Pause after vote ends</div>
-        </div>
+    <div class="settings-title">SETTINGS</div>
 
-        <div style="font-weight: bold; color: #4ecca3; margin: 20px 0 10px 0; padding-bottom: 10px; border-bottom: 1px solid #333;">
-            Food & Resources
-        </div>
-
-        <div class="setting-item">
-            <div class="setting-label">
-                <span>Food Spawn Interval</span>
-                <span class="setting-value"><span id="foodIntervalValue">2</span>s</span>
-            </div>
-            <input type="range" id="foodInterval" min="0.5" max="10" step="0.5">
-            <div class="setting-description">Time between food spawns</div>
-        </div>
-
-        <div class="setting-item">
-            <div class="setting-label">
-                <span>Food Per Spawn</span>
-                <span class="setting-value"><span id="foodAmountValue">3</span></span>
-            </div>
-            <input type="range" id="foodAmount" min="1" max="10" step="1">
-            <div class="setting-description">Food items per spawn</div>
-        </div>
-
-        <div style="font-weight: bold; color: #4ecca3; margin: 20px 0 10px 0; padding-bottom: 10px; border-bottom: 1px solid #333;">
-            Entity Behavior
-        </div>
-
-        <div class="setting-item">
-            <div class="setting-label">
-                <span>Hunger Rate</span>
-                <span class="setting-value"><span id="hungerRateValue">1.5</span>/s</span>
-            </div>
-            <input type="range" id="hungerRate" min="0.5" max="5" step="0.1">
-            <div class="setting-description">How fast entities get hungry</div>
-        </div>
-
-        <div class="setting-item">
-            <div class="setting-label">
-                <span>Birth Cooldown</span>
-                <span class="setting-value"><span id="birthCooldownValue">10</span>s</span>
-            </div>
-            <input type="range" id="birthCooldown" min="5" max="60" step="5">
-            <div class="setting-description">Time between reproductions</div>
-        </div>
-
-        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; font-size: 12px; color: #888;">
-            <div style="margin-bottom: 8px;"><strong style="color: #4ecca3;">Chatter Spawn Rates:</strong></div>
-            <div>• &lt;10 viewers: 100% spawn</div>
-            <div>• 10-50 viewers: 80% spawn</div>
-            <div>• 50-100 viewers: 50% spawn</div>
-            <div>• 100-500 viewers: 30% spawn</div>
-            <div>• 500+ viewers: 15% spawn</div>
-        </div>
+    <div style="font-weight: bold; color: #4ecca3; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333;">
+        Visual
     </div>
+    
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Wireframe Background</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="backgroundToggle">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div class="setting-description">Animated singularity effect (may reduce performance)</div>
+    </div>
+    
+    <div style="font-weight: bold; color: #4ecca3; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333;">
+        Voting
+    </div>
+    
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Vote Interval</span>
+            <span class="setting-value"><span id="voteIntervalValue">180</span>s</span>
+        </div>
+        <input type="range" id="voteInterval" min="30" max="600" step="30">
+        <div class="setting-description">Time between votes</div>
+    </div>
+    
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Vote Duration</span>
+            <span class="setting-value"><span id="voteDurationValue">30</span>s</span>
+        </div>
+        <input type="range" id="voteDuration" min="10" max="120" step="5">
+        <div class="setting-description">How long voting lasts</div>
+    </div>
+    
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Vote Cooldown</span>
+            <span class="setting-value"><span id="voteCooldownValue">30</span>s</span>
+        </div>
+        <input type="range" id="voteCooldown" min="0" max="120" step="10">
+        <div class="setting-description">Pause after vote ends</div>
+    </div>
+
+    <div style="font-weight: bold; color: #4ecca3; margin: 20px 0 10px 0; padding-bottom: 10px; border-bottom: 1px solid #333;">
+        Food & Resources
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Food Spawn Interval</span>
+            <span class="setting-value"><span id="foodIntervalValue">2.0</span>s</span>
+        </div>
+        <input type="range" id="foodInterval" min="0.5" max="10" step="0.5">
+        <div class="setting-description">Time between food spawns</div>
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Food Per Spawn</span>
+            <span class="setting-value"><span id="foodAmountValue">3</span></span>
+        </div>
+        <input type="range" id="foodAmount" min="1" max="10" step="1">
+        <div class="setting-description">Food items per spawn</div>
+    </div>
+
+    <div style="font-weight: bold; color: #4ecca3; margin: 20px 0 10px 0; padding-bottom: 10px; border-bottom: 1px solid #333;">
+        Entity Behavior
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Hunger Rate</span>
+            <span class="setting-value"><span id="hungerRateValue">1.5</span>/s</span>
+        </div>
+        <input type="range" id="hungerRate" min="0.5" max="5" step="0.1">
+        <div class="setting-description">How fast entities get hungry</div>
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Birth Cooldown</span>
+            <span class="setting-value"><span id="birthCooldownValue">10</span>s</span>
+        </div>
+        <input type="range" id="birthCooldown" min="5" max="60" step="5">
+        <div class="setting-description">Time between reproductions</div>
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Size Scaler</span>
+            <span class="setting-value"><span id="sizeScalerValue">1.00x</span></span>
+        </div>
+        <input type="range" id="sizeScaler" min="0.5" max="3" step="0.05">
+        <div class="setting-description">Global size multiplier</div>
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Health Scaler</span>
+            <span class="setting-value"><span id="healthScalerValue">1.00x</span></span>
+        </div>
+        <input type="range" id="healthScaler" min="0.5" max="3" step="0.05">
+        <div class="setting-description">Global health multiplier</div>
+    </div>
+
+    <div style="font-weight: bold; color: #4ecca3; margin: 20px 0 10px 0; padding-bottom: 10px; border-bottom: 1px solid #333;">
+    Population Control
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Min Population Cap</span>
+            <span class="setting-value"><span id="populationMinValue">10</span></span>
+        </div>
+        <input type="range" id="populationMin" min="5" max="50" step="5">
+        <div class="setting-description">Minimum entity limit (low energy)</div>
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Max Population Cap</span>
+            <span class="setting-value"><span id="populationMaxValue">30</span></span>
+        </div>
+        <input type="range" id="populationMax" min="10" max="100" step="5">
+        <div class="setting-description">Maximum entity limit (high energy)</div>
+    </div>
+
+    <div style="font-weight: bold; color: #4ecca3; margin: 20px 0 10px 0; padding-bottom: 10px; border-bottom: 1px solid #333;">
+        Predators
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Predator Spawn Interval</span>
+            <span class="setting-value"><span id="predatorIntervalValue">30</span>s</span>
+        </div>
+        <input type="range" id="predatorInterval" min="10" max="120" step="5">
+        <div class="setting-description">Time between predator spawns</div>
+    </div>
+
+    <div class="setting-item">
+        <div class="setting-label">
+            <span>Attack Damage Scaler</span>
+            <span class="setting-value"><span id="attackScalerValue">1.00x</span></span>
+        </div>
+        <input type="range" id="attackScaler" min="0.5" max="3" step="0.05">
+        <div class="setting-description">Predator damage multiplier</div>
+    </div>
+
+    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; font-size: 12px; color: #888;">
+        <div style="margin-bottom: 8px;"><strong style="color: #4ecca3;">Chatter Spawn Rates:</strong></div>
+        <div>• &lt;10 viewers: 100% spawn</div>
+        <div>• 10-50 viewers: 80% spawn</div>
+        <div>• 50-100 viewers: 50% spawn</div>
+        <div>• 100-500 viewers: 30% spawn</div>
+        <div>• 500+ viewers: 15% spawn</div>
+    </div>
+
+    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333; font-size: 11px; color: #4ecca3; text-align: center;">
+        ✓ Settings auto-save
+    </div>
+</div>
     
     <div class="notification" id="notification"></div> </div>
     

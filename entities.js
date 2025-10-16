@@ -206,9 +206,10 @@ class Entity {
         this.vy = randomRange(-1, 1);
         this.speed = (CONFIG.entity.baseSpeed + randomRange(-CONFIG.entity.speedVariance, CONFIG.entity.speedVariance)) * speedMult;
         
-        this.health = CONFIG.entity.startingHealth * healthMult;
-        this.maxHealth = CONFIG.entity.maxHealth * healthMult;
-        this.size = (parentSize ? parentSize * 0.6 : CONFIG.entity.baseSize) * sizeMult;
+        this.health = CONFIG.entity.startingHealth * healthMult * CONFIG.entity.healthScaler;
+        this.maxHealth = CONFIG.entity.maxHealth * healthMult * CONFIG.entity.healthScaler;
+        this.size = (parentSize ? parentSize * 0.6 : CONFIG.entity.baseSize) * sizeMult * CONFIG.entity.sizeScaler;
+        
         this.age = 0;
         this.alive = true;
         this.timeSinceReproduction = 0;
@@ -534,7 +535,7 @@ class Predator extends Entity {
             }
             
             if (dist < CONFIG.predator.attackRange && this.attackCooldown <= 0) {
-                nearestPrey.health -= CONFIG.predator.attackDamage;
+                nearestPrey.health -= CONFIG.predator.attackDamage * CONFIG.predator.attackScaler;
                 this.attackCooldown = 1;
                 this.health = Math.min(this.health + 10, this.maxHealth);
             }
