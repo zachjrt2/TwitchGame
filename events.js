@@ -12,7 +12,9 @@ class EventSystem {
 
     update(dt) {
         if (!CONFIG.events.enabled) {
-            this.currentEvent = null;
+            if (this.currentEvent) {
+                this.endEvent(); // End any active event
+            }
             return;
         }
 

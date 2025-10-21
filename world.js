@@ -25,10 +25,13 @@ class World {
     this.deathCamTarget = null;
     this.timeScale = 1;
     
-    // NEW: Initialize environment systems
+    this.backgroundTime = 0;  // NEW - for background animation
+    
+    // Initialize environment systems
     this.weatherSystem = new WeatherSystem(this);
     this.biomeSystem = new BiomeSystem(this);
     this.eventSystem = new EventSystem(this);
+    this.leaderboardSystem = new LeaderboardSystem(this);
     
     this.spawnInitialEntities();
     this.spawnInitialFood();
@@ -102,10 +105,13 @@ class World {
         this.food.push(new Food(fx, fy));
     }
 
-    drawBackground(ctx) {
+drawBackground(ctx) {
     const centerX = this.width / 2;
     const centerY = this.height / 2;
-    const time = Date.now() * 0.0003; // Slow rotation
+    
+    // Use a continuous time value that updates every frame
+    if (!this.backgroundTime) this.backgroundTime = 0;
+    this.backgroundTime += 0.016; // Increment each frame
     
     ctx.save();
     
@@ -114,80 +120,60 @@ class World {
     ctx.fillStyle = `hsl(240, 30%, ${bgBrightness}%)`;
     ctx.fillRect(0, 0, this.width, this.height);
     
-    // Wireframe grid
-    ctx.strokeStyle = `hsla(180, 70%, 50%, ${0.15 + (this.energy / 100) * 0.1})`;
-    ctx.lineWidth = 1;
-    
-    const gridSize = 60;
-    const gridLines = 20;
-    
-    // Rotate slightly over time
+    // Draw concentric rings with perspective
     ctx.translate(centerX, centerY);
-    ctx.rotate(time);
-    ctx.translate(-centerX, -centerY);
     
-    // Draw warped grid
-    for (let i = -gridLines; i <= gridLines; i++) {
+    const maxDepth = 30; // More rings for deeper effect
+    const angleStep = Math.PI / 15; // Angular resolution
+    const energyGlow = 0.1 + (this.energy / 100) * 0.2;
+    
+    // Animate depth to create pulling effect
+    const depthOffset = (this.backgroundTime * -.1) % 1; // Loops 0 to 1
+    
+    // Draw from back to front
+    for (let depth = maxDepth; depth > 0.1; depth -= 0.5) {  // Go closer to 0
+        // Apply depth offset to create continuous pulling motion
+        const animatedDepth = depth - depthOffset;
+        if (animatedDepth <= 0.1) continue; // Skip if pulled into center
+        
+        const radius = 1880 / animatedDepth; // Perspective
+        const yOffset = animatedDepth * 1; // Much flatter - reduced from 25
+        
         ctx.beginPath();
-        for (let j = -gridLines; j <= gridLines; j++) {
-            const x = centerX + i * gridSize;
-            const y = centerY + j * gridSize;
+        
+        for (let angle = 0; angle < Math.PI * 2; angle += angleStep) {
+            // Spiral effect
+            const spiralAngle = angle + (animatedDepth * 0.15);
             
-            // Calculate distance from center
-            const dx = x - centerX;
-            const dy = y - centerY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            const x = Math.cos(spiralAngle) * radius;
+            const y = Math.sin(spiralAngle) * radius / 3 + yOffset; // Flatter ellipse - changed from /2
             
-            // Warp effect - pull toward center
-            const warpStrength = 0.3;
-            const maxDist = Math.sqrt(this.width * this.width + this.height * this.height) / 2;
-            const warp = Math.pow(1 - Math.min(dist / maxDist, 1), 2) * warpStrength;
-            
-            const warpX = x - dx * warp;
-            const warpY = y - dy * warp;
-            
-            if (j === -gridLines) {
-                ctx.moveTo(warpX, warpY);
+            if (angle === 0) {
+                ctx.moveTo(x, y);
             } else {
-                ctx.lineTo(warpX, warpY);
+                ctx.lineTo(x, y);
             }
         }
+        
+        ctx.closePath();
+        
+        // Fade out as it gets closer to center - but more gradually
+        const depthRatio = animatedDepth / maxDepth;
+        const alpha = Math.min(energyGlow * Math.pow(depthRatio, 0.5), 0.1); // Slower fade
+        const hue = 180 + (animatedDepth * 2); // Color shift
+        ctx.strokeStyle = `hsla(${hue}, 70%, 50%, 5%)`;
+        ctx.lineWidth = 1;
         ctx.stroke();
     }
     
-    // Draw perpendicular lines
-    for (let j = -gridLines; j <= gridLines; j++) {
-        ctx.beginPath();
-        for (let i = -gridLines; i <= gridLines; i++) {
-            const x = centerX + i * gridSize;
-            const y = centerY + j * gridSize;
-            
-            const dx = x - centerX;
-            const dy = y - centerY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            
-            const warpStrength = 0.3;
-            const maxDist = Math.sqrt(this.width * this.width + this.height * this.height) / 2;
-            const warp = Math.pow(1 - Math.min(dist / maxDist, 1), 2) * warpStrength;
-            
-            const warpX = x - dx * warp;
-            const warpY = y - dy * warp;
-            
-            if (i === -gridLines) {
-                ctx.moveTo(warpX, warpY);
-            } else {
-                ctx.lineTo(warpX, warpY);
-            }
-        }
-        ctx.stroke();
-    }
-    
-    // Central glow
-    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 200);
-    gradient.addColorStop(0, `hsla(180, 80%, 60%, ${0.05 + (this.energy / 100) * 0.05})`);
-    gradient.addColorStop(1, 'transparent');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, this.width, this.height);
+    // Central glow with pulse
+    // const pulseGlow = Math.sin(this.backgroundTime * 2) * 0.1 + 0.3;
+    // const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 150);
+    // gradient.addColorStop(0, `hsla(180, 80%, 60%, ${pulseGlow + (this.energy / 100) * 0.2})`);
+    // gradient.addColorStop(0.5, `hsla(180, 70%, 50%, ${0.1 + (this.energy / 100) * 0.1})`);
+    // gradient.addColorStop(1, 'transparent');
+    // ctx.fillStyle = gradient;
+    // ctx.fillRect(-centerX, -centerY, this.width, this.height);
     
     ctx.restore();
 }
@@ -280,25 +266,33 @@ class World {
         }
         this.entities.push(...newborns);
         
-        const deadEntities = this.entities.filter(e => !e.alive);
-        for (const dead of deadEntities) {
-            if (!this.deathCamActive && Math.random() < 0.3) {
-                this.triggerDeathCam(dead);
-            }
-            
-            for (let i = 0; i < 20; i++) {
-                this.particles.push(new Particle(dead.x, dead.y, 'death'));
-            }
-            
-            for (let i = 0; i < CONFIG.food.dropOnDeath; i++) {
-                const angle = (Math.PI * 2 * i) / CONFIG.food.dropOnDeath;
-                const dist = 20;
-                const fx = dead.x + Math.cos(angle) * dist;
-                const fy = dead.y + Math.sin(angle) * dist;
-                this.spawnFood(fx, fy);
-            }
-            this.deathCount++;
+const deadEntities = this.entities.filter(e => !e.alive);
+for (const dead of deadEntities) {
+    if (!this.deathCamActive && Math.random() < 0.3) {
+        this.triggerDeathCam(dead);
+    }
+    
+    // Spawn death particles
+    for (let i = 0; i < 20; i++) {
+        this.particles.push(new Particle(dead.x, dead.y, 'death'));
         }
+    
+    // NEW: Calculate food drops based on entity size and evolution
+    const sizeRatio = dead.size / CONFIG.entity.baseSize; // How much bigger than starting size
+    const baseFoodDrop = CONFIG.food.dropOnDeath;
+    const foodDropCount = Math.floor(baseFoodDrop + (sizeRatio * 2) + (dead.sides / 3));
+    
+    // Drop food in a circle pattern
+    for (let i = 0; i < foodDropCount; i++) {
+        const angle = (Math.PI * 2 * i) / foodDropCount;
+        const dist = 20 + (sizeRatio * 5); // Spread further for bigger entities
+        const fx = dead.x + Math.cos(angle) * dist;
+        const fy = dead.y + Math.sin(angle) * dist;
+        this.spawnFood(fx, fy);
+    }
+    
+    this.deathCount++;
+}
         
         this.entities = this.entities.filter(e => e.alive);
         

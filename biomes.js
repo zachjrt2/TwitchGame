@@ -41,34 +41,42 @@ class BiomeSystem {
         return null;
     }
 
-    draw(ctx) {
-        if (!CONFIG.biomes.enabled) return;
-
-        for (const biome of this.biomes) {
-            ctx.save();
-            
-            // Draw biome circle
-            ctx.fillStyle = biome.type.color;
-            ctx.beginPath();
-            ctx.arc(biome.x, biome.y, biome.radius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw border
-            ctx.strokeStyle = biome.type.borderColor;
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Draw label
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.font = 'bold 14px Courier New';
-            ctx.textAlign = 'center';
-            ctx.fillText(biome.type.name, biome.x, biome.y);
-            
-            ctx.restore();
-        }
+draw(ctx) {
+    if (!CONFIG.biomes.enabled) {
+        this.biomes = []; // Clear when disabled
+        return;
     }
+    
+    // Regenerate if we have no biomes but should
+    if (this.biomes.length === 0) {
+        this.generateBiomes();
+    }
+
+    for (const biome of this.biomes) {
+        ctx.save();
+        
+        // Draw biome circle
+        ctx.fillStyle = biome.type.color;
+        ctx.beginPath();
+        ctx.arc(biome.x, biome.y, biome.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw border
+        ctx.strokeStyle = biome.type.borderColor;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Draw label
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.font = 'bold 14px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText(biome.type.name, biome.x, biome.y);
+        
+        ctx.restore();
+    }
+}
 
     getHungerMultAt(x, y) {
         const biome = this.getBiomeAt(x, y);

@@ -14,6 +14,10 @@ class Game {
         this.twitchManager = new TwitchManager(this.world);
         this.voteManager = new VoteManager(this.world, this.twitchManager);
         this.twitchManager.setVoteManager(this.voteManager);
+        this.leaderboardSystem = new LeaderboardSystem(this.world);  // NEW
+        
+        // Make game globally accessible for leaderboard tabs
+        window.game = this;  // NEW
         
         this.lastTime = performance.now();
         this.fps = 0;
@@ -55,7 +59,17 @@ class Game {
                 status.className = 'status disconnected';
                 connectBtn.disabled = false;
             }
+            // Tab switching with visual feedback
+        const tabs = document.querySelectorAll('.leaderboard-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+            });
         });
+        });
+
+        
 
         disconnectBtn.addEventListener('click', () => {
             this.twitchManager.disconnect();
@@ -74,9 +88,15 @@ class Game {
         settingsBtn.addEventListener('click', () => {
             settingsPanel.classList.toggle('show');
         });
+
+        const leaderboardBtn = document.getElementById('leaderboardBtn');
+    
+        leaderboardBtn.addEventListener('click', () => {
+            this.leaderboardSystem.toggle();
+        });
     }
 
-    setupSettings() {
+setupSettings() {
     // Load saved settings on startup
     loadSettings();
     
@@ -109,53 +129,67 @@ class Game {
             
             valueSpan.textContent = formatter(newValue);
             saveSettings();
-            });
-        };
-
-        const weatherToggle = document.getElementById('weatherToggle');
-        weatherToggle.checked = CONFIG.weather.enabled;
-        weatherToggle.addEventListener('change', (e) => {
-            CONFIG.weather.enabled = e.target.checked;
-            saveSettings();
         });
+    };
     
-        // Voting Settings
-        setupSetting('voteInterval', 'voteIntervalValue', 'voting.interval');
-        setupSetting('voteDuration', 'voteDurationValue', 'voting.duration');
-        setupSetting('voteCooldown', 'voteCooldownValue', 'voting.cooldown');
-        
-        // Food Settings
-        setupSetting('foodInterval', 'foodIntervalValue', 'food.spawnInterval', v => v.toFixed(1));
-        setupSetting('foodAmount', 'foodAmountValue', 'food.spawnAmount');
-        
-        // Entity Settings
-        setupSetting('hungerRate', 'hungerRateValue', 'entity.healthDecayRate', v => v.toFixed(1));
-        setupSetting('birthCooldown', 'birthCooldownValue', 'entity.reproductionCooldown');
-        setupSetting('sizeScaler', 'sizeScalerValue', 'entity.sizeScaler', v => v.toFixed(2) + 'x');
-        setupSetting('healthScaler', 'healthScalerValue', 'entity.healthScaler', v => v.toFixed(2) + 'x');
-        
-        // Predator Settings
-        setupSetting('predatorInterval', 'predatorIntervalValue', 'predator.spawnInterval');
-        setupSetting('attackScaler', 'attackScalerValue', 'predator.attackScaler', v => v.toFixed(2) + 'x');
-
-        setupSetting('populationMin', 'populationMinValue', 'twitch.populationCapMin');
-        setupSetting('populationMax', 'populationMaxValue', 'twitch.populationCapMax');
-
-        const bgToggle = document.getElementById('backgroundToggle');
-        bgToggle.checked = CONFIG.background.enabled;
-        
-        bgToggle.addEventListener('change', (e) => {
-            CONFIG.background.enabled = e.target.checked;
-            saveSettings(); 
-        });
-        
-        // Special handling for vote interval (to update timer)
-        document.getElementById('voteInterval').addEventListener('input', () => {
-            if (!this.voteManager.active && this.voteManager.timeUntilNextVote > CONFIG.voting.interval) {
-                this.voteManager.timeUntilNextVote = CONFIG.voting.interval;
-            }
-        });
-    }
+    // Background toggle
+    const bgToggle = document.getElementById('backgroundToggle');
+    bgToggle.checked = CONFIG.background.enabled;
+    bgToggle.addEventListener('change', (e) => {
+        CONFIG.background.enabled = e.target.checked;
+        saveSettings();
+    });
+    
+    // Weather toggle
+    const weatherToggle = document.getElementById('weatherToggle');
+    weatherToggle.checked = CONFIG.weather.enabled;
+    weatherToggle.addEventListener('change', (e) => {
+        CONFIG.weather.enabled = e.target.checked;
+        saveSettings();
+    });
+    
+    // Biomes toggle
+    const biomesToggle = document.getElementById('biomesToggle');
+    biomesToggle.checked = CONFIG.biomes.enabled;
+    biomesToggle.addEventListener('change', (e) => {
+        CONFIG.biomes.enabled = e.target.checked;
+        if (e.target.checked) {
+            // Regenerate biomes when re-enabled
+            this.world.biomeSystem.generateBiomes();
+        }
+        saveSettings();
+    });
+    
+    // Events toggle
+    const eventsToggle = document.getElementById('eventsToggle');
+    eventsToggle.checked = CONFIG.events.enabled;
+    eventsToggle.addEventListener('change', (e) => {
+        CONFIG.events.enabled = e.target.checked;
+        saveSettings();
+    });
+    
+    // All other settings
+    setupSetting('voteInterval', 'voteIntervalValue', 'voting.interval');
+    setupSetting('voteDuration', 'voteDurationValue', 'voting.duration');
+    setupSetting('voteCooldown', 'voteCooldownValue', 'voting.cooldown');
+    setupSetting('foodInterval', 'foodIntervalValue', 'food.spawnInterval', v => v.toFixed(1));
+    setupSetting('foodAmount', 'foodAmountValue', 'food.spawnAmount');
+    setupSetting('hungerRate', 'hungerRateValue', 'entity.healthDecayRate', v => v.toFixed(1));
+    setupSetting('birthCooldown', 'birthCooldownValue', 'entity.reproductionCooldown');
+    setupSetting('sizeScaler', 'sizeScalerValue', 'entity.sizeScaler', v => v.toFixed(2) + 'x');
+    setupSetting('healthScaler', 'healthScalerValue', 'entity.healthScaler', v => v.toFixed(2) + 'x');
+    setupSetting('predatorInterval', 'predatorIntervalValue', 'predator.spawnInterval');
+    setupSetting('attackScaler', 'attackScalerValue', 'predator.attackScaler', v => v.toFixed(2) + 'x');
+    setupSetting('populationMin', 'populationMinValue', 'twitch.populationCapMin');
+    setupSetting('populationMax', 'populationMaxValue', 'twitch.populationCapMax');
+    
+    // Special handling for vote interval (to update timer)
+    document.getElementById('voteInterval').addEventListener('input', () => {
+        if (!this.voteManager.active && this.voteManager.timeUntilNextVote > CONFIG.voting.interval) {
+            this.voteManager.timeUntilNextVote = CONFIG.voting.interval;
+        }
+    });
+}
 
     loop() {
         if (!this.running) return;
@@ -175,6 +209,7 @@ class Game {
         
         this.voteManager.update(dt);
         this.world.update(dt);
+        this.leaderboardSystem.update(dt);  // NEW
         this.world.draw(this.ctx);
         this.updateUI();
         

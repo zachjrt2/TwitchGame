@@ -167,7 +167,9 @@ class Entity {
         this.generation = parentGeneration;
         this.world = world;
         this.maxSizeReachedAt = null;
-        
+        this.foodEaten = 0;  // NEW
+        this.spawnTime = Date.now(); 
+                
         // Mutation stack tracking
         this.mutationStack = parentMutationStack ? {...parentMutationStack} : {};
         
